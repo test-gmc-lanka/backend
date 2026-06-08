@@ -96,10 +96,18 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
+      - name: Cache OWASP NVD database
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository/org/owasp/dependency-check-data
+          key: owasp-nvd-${{ runner.os }}-v1
+          restore-keys: |
+            owasp-nvd-${{ runner.os }}-
+
       - name: OWASP Dependency Check
-        run: mvn -B org.owasp:dependency-check-maven:check
-          -DfailBuildOnCVSS=8
-          --no-transfer-progress
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        run: mvn -B dependency-check:check --no-transfer-progress
 
   # ── Stage 4: Deploy to Staging ────────────────────────────
   deploy-staging:
