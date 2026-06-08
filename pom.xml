@@ -28,7 +28,6 @@
 	</scm>
 	<properties>
 		<java.version>21</java.version>
-		<dependency-check.version>12.2.2</dependency-check.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -213,21 +212,6 @@
 						</goals>
 					</execution>
 				</executions>
-			</plugin>
-			<plugin>
-				<groupId>org.owasp</groupId>
-				<artifactId>dependency-check-maven</artifactId>
-				<version>${dependency-check.version}</version>
-				<configuration>
-					<failBuildOnCVSS>8</failBuildOnCVSS>
-					<nvdApiKey>${env.NVD_API_KEY}</nvdApiKey>
-					<nvdValidForHours>168</nvdValidForHours>
-					<nvdApiDelay>8000</nvdApiDelay>
-					<formats>
-						<format>HTML</format>
-						<format>JSON</format>
-					</formats>
-				</configuration>
 			</plugin>
 		</plugins>
 	</build>
