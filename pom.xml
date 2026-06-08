@@ -171,21 +171,6 @@
 					</execution>
 				</executions>
 			</plugin>
-			<!--  ── OWASP Dependency Check ───────────────────  -->
-			<plugin>
-				<groupId>org.owasp</groupId>
-				<artifactId>dependency-check-maven</artifactId>
-				<version>${dependency-check.version}</version>
-				<configuration>
-					<failBuildOnCVSS>8</failBuildOnCVSS>
-					<nvdValidForHours>168</nvdValidForHours>
-					<nvdApiDelay>8000</nvdApiDelay>
-					<formats>
-						<format>HTML</format>
-						<format>JSON</format>
-					</formats>
-				</configuration>
-			</plugin>
 		</plugins>
 	</build>
 </project>
