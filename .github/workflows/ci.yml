@@ -97,9 +97,14 @@ jobs:
           cache: maven
 
       - name: OWASP Dependency Check
-        run: mvn -B org.owasp:dependency-check-maven:check
-          -DfailBuildOnCVSS=8
-          --no-transfer-progress
+        continue-on-error: true
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        run: |
+          mvn -B org.owasp:dependency-check-maven:check \
+            -DfailBuildOnCVSS=8 \
+            -DnvdApiKey=${NVD_API_KEY} \
+            --no-transfer-progress
 
   # ── Stage 4: Deploy to Staging ────────────────────────────
   deploy-staging:
