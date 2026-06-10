@@ -14,6 +14,5 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     Optional<Payment> findByInvoice(Invoice invoice);
 
     Optional<Payment> findByInvoice_InvoiceId(Long invoiceId);
-
     List<Payment> findByMethod(String method);
 }
