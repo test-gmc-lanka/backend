@@ -12,3 +12,4 @@ public interface ProductCategoryRepository extends JpaRepository<ProductCategory
     boolean existsByName(String name);
 
 }
+
