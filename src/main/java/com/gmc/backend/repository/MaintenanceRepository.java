@@ -1,4 +1,4 @@
-﻿package com.gmc.backend.repository;
+package com.gmc.backend.repository;
 
 import com.gmc.backend.model.Maintenance;
 import com.gmc.backend.model.Product;
