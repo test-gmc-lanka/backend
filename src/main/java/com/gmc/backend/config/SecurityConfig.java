@@ -1,7 +1,7 @@
 package com.gmc.backend.config;
 
 import com.gmc.backend.security.JwtAuthenticationFilter;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -23,7 +23,6 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.List;
 
 @Configuration
-@RequiredArgsConstructor
 @EnableMethodSecurity
 public class SecurityConfig {
 
@@ -31,23 +30,35 @@ public class SecurityConfig {
     private final UserDetailsService userDetailsService;
     private final PasswordEncoder passwordEncoder;
 
+    @Value("${app.cors.allowed-origins:http://localhost:5173}")
+    private String allowedOrigin;
+
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthFilter,
+                          UserDetailsService userDetailsService,
+                          PasswordEncoder passwordEncoder) {
+        this.jwtAuthFilter = jwtAuthFilter;
+        this.userDetailsService = userDetailsService;
+        this.passwordEncoder = passwordEncoder;
+    }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.cors(cors -> { })
                 .csrf(csrf -> csrf.disable())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
                         .requestMatchers("/uploads/**").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/api/orders").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/api/orders/my").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/api/appointments").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/api/appointments/my").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/api/cart/**").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/api/cart/**").authenticated()
+                        .requestMatchers("/api/orders/**").hasRole("CUSTOMER")
+                        .requestMatchers("/api/appointments/**").hasRole("CUSTOMER")
+                        .requestMatchers("/api/feedback/**").hasRole("CUSTOMER")
+                        .requestMatchers("/api/custom-designs/**").hasRole("CUSTOMER")
+                        .requestMatchers("/api/payments/**").hasRole("CUSTOMER")
+                        .requestMatchers("/api/technician/**").hasRole("TECHNICIAN")
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())
@@ -58,8 +69,6 @@ public class SecurityConfig {
 
     @Bean
     public AuthenticationProvider authenticationProvider() {
-        // DaoAuthenticationProvider no longer has a constructor that accepts UserDetailsService
-        // Create with no-arg (or with PasswordEncoder) and set the UserDetailsService via setter
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
         authProvider.setUserDetailsService(userDetailsService);
         authProvider.setPasswordEncoder(passwordEncoder);
@@ -68,14 +77,14 @@ public class SecurityConfig {
 
     @Bean
     public AuthenticationManager authenticationManager(
-            AuthenticationConfiguration config
-    ) throws Exception {
+            AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:5173")); // Vite frontend
+        config.setAllowedOrigins(List.of(allowedOrigin));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
@@ -85,4 +94,3 @@ public class SecurityConfig {
         return source;
     }
 }
-

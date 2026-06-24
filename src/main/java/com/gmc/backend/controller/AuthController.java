@@ -23,33 +23,34 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/register")
-    public AuthResponse register(@Valid @RequestBody RegisterRequest request) {
-        return authService.register(request);
+    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(authService.register(request));
     }
 
     @PostMapping("/login")
-    public AuthResponse login(@Valid @RequestBody LoginRequest request, HttpServletResponse response) {
-        return authService.login(request, response);
+    public ResponseEntity<AuthResponse> login(
+            @Valid @RequestBody LoginRequest request,
+            HttpServletResponse response) {
+        return ResponseEntity.ok(authService.login(request, response));
     }
 
-    /**
-     * Refresh access token using HttpOnly refresh token cookie.
-     * Returns 401 instead of 400/500 when the cookie is missing or invalid,
-     * so the frontend can reliably force logout.
-     */
     @PostMapping("/refresh")
     public ResponseEntity<AuthResponse> refresh(
-            @CookieValue(value = "refreshToken", required = false) String refreshToken) {
+            @CookieValue(value = "refreshToken", required = false) String refreshToken,
+            HttpServletResponse response) {
         if (refreshToken == null || refreshToken.isBlank()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
+        return ResponseEntity.ok(authService.refresh(refreshToken, response));
+    }
 
-        try {
-            AuthResponse response = authService.refresh(refreshToken);
-            return ResponseEntity.ok(response);
-        } catch (RuntimeException ex) {
-            // Covers "Invalid refresh token" and "Refresh token expired"
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(
+            @CookieValue(value = "refreshToken", required = false) String refreshToken,
+            HttpServletResponse response) {
+        if (refreshToken != null && !refreshToken.isBlank()) {
+            authService.logout(refreshToken, response);
         }
+        return ResponseEntity.noContent().build();
     }
 }
