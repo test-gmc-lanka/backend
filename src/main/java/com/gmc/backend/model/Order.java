@@ -20,6 +20,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -46,6 +47,17 @@ public class Order {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private OrderStatus status;
+
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    @Column(name = "order_type", nullable = false)
+    private OrderType orderType = OrderType.B2C;
+
+    @Column(precision = 12, scale = 2)
+    private BigDecimal totalAmount;
+
+    @Column(length = 1000)
+    private String notes;
 
     @NotNull(message = "User is required")
     @ManyToOne(fetch = FetchType.LAZY)
