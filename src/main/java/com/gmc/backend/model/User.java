@@ -49,4 +49,14 @@ public class User {
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "role_id", nullable = false)
     private Role role;
+
+    @Column
+    private String phone;
+
+    @Column
+    private String address;
+
+    @Builder.Default
+    @Column(nullable = false)
+    private Boolean active = true;
 }
