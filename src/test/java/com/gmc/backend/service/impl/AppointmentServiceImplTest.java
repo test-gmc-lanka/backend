@@ -26,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -44,6 +45,8 @@ class AppointmentServiceImplTest {
     @InjectMocks
     private AppointmentServiceImpl appointmentService;
 
+    // ── helpers ──────────────────────────────────────────────────────────────
+
     private User user() {
         Role role = Role.builder().roleId(1L).roleName("CUSTOMER").build();
         return User.builder().userId(1L).name("User").email("user@example.com")
@@ -59,6 +62,25 @@ class AppointmentServiceImplTest {
                 .user(u)
                 .build();
     }
+
+    private RescheduleRequest rescheduleRequest(LocalDateTime newDate) {
+        RescheduleRequest req = new RescheduleRequest();
+        req.setNewDate(newDate);
+        return req;
+    }
+
+    // Makes repository.save() return the same object it receives, so the
+    // status/date set by the service can be checked on the response.
+    private void saveReturnsArgument() {
+        when(appointmentRepository.save(any(Appointment.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+    }
+
+    private void found(Appointment a) {
+        when(appointmentRepository.findById(1L)).thenReturn(Optional.of(a));
+    }
+
+    // ════════════════════════ CUSTOMER: book ═════════════════════════════════
 
     @Test
     void bookAppointment_shouldSaveAndReturnPendingAppointment() {
@@ -89,54 +111,73 @@ class AppointmentServiceImplTest {
                 () -> appointmentService.bookAppointment(99L, req));
     }
 
+    // ════════════════════════ CUSTOMER: reschedule ═══════════════════════════
+
     @Test
     void reschedule_shouldThrowWhenAppointmentIsCancelled() {
-        User u = user();
-        Appointment cancelled = appointment(u, AppointmentStatus.CANCELLED);
-        when(appointmentRepository.findById(1L)).thenReturn(Optional.of(cancelled));
+        found(appointment(user(), AppointmentStatus.CANCELLED));
 
-        RescheduleRequest req = new RescheduleRequest();
-        req.setNewDate(LocalDateTime.now().plusDays(3));
-
-        assertThrows(BusinessRuleException.class, () -> appointmentService.reschedule(1L, 1L, req));
+        assertThrows(BusinessRuleException.class, () -> appointmentService.reschedule(
+                1L, 1L, rescheduleRequest(LocalDateTime.now().plusDays(3))));
     }
 
     @Test
     void reschedule_shouldThrowWhenAppointmentIsCompleted() {
-        User u = user();
-        Appointment completed = appointment(u, AppointmentStatus.COMPLETED);
-        when(appointmentRepository.findById(1L)).thenReturn(Optional.of(completed));
+        found(appointment(user(), AppointmentStatus.COMPLETED));
 
-        RescheduleRequest req = new RescheduleRequest();
-        req.setNewDate(LocalDateTime.now().plusDays(3));
-
-        assertThrows(BusinessRuleException.class, () -> appointmentService.reschedule(1L, 1L, req));
+        assertThrows(BusinessRuleException.class, () -> appointmentService.reschedule(
+                1L, 1L, rescheduleRequest(LocalDateTime.now().plusDays(3))));
     }
 
     @Test
     void reschedule_shouldUpdateDateForPendingAppointment() {
-        User u = user();
         LocalDateTime newDate = LocalDateTime.now().plusDays(5);
-        Appointment pending = appointment(u, AppointmentStatus.PENDING);
-        Appointment rescheduled = Appointment.builder().appointmentId(1L)
-                .date(newDate).message("Test message").status(AppointmentStatus.PENDING).user(u).build();
-        when(appointmentRepository.findById(1L)).thenReturn(Optional.of(pending));
-        when(appointmentRepository.save(any())).thenReturn(rescheduled);
+        found(appointment(user(), AppointmentStatus.PENDING));
+        saveReturnsArgument();
 
-        RescheduleRequest req = new RescheduleRequest();
-        req.setNewDate(newDate);
-
-        AppointmentResponse result = appointmentService.reschedule(1L, 1L, req);
+        AppointmentResponse result =
+                appointmentService.reschedule(1L, 1L, rescheduleRequest(newDate));
 
         assertEquals(newDate, result.getDate());
+        assertEquals(AppointmentStatus.PENDING, result.getStatus());
         verify(notificationService).sendNotification(eq(1L), any(), eq("APPOINTMENT"));
     }
 
     @Test
+    void reschedule_shouldSetApprovedAppointmentBackToPending() {
+        found(appointment(user(), AppointmentStatus.APPROVED));
+        saveReturnsArgument();
+
+        AppointmentResponse result = appointmentService.reschedule(
+                1L, 1L, rescheduleRequest(LocalDateTime.now().plusDays(4)));
+
+        assertEquals(AppointmentStatus.PENDING, result.getStatus());
+    }
+
+    @Test
+    void reschedule_shouldThrowWhenAccessedByDifferentUser() {
+        User owner = User.builder().userId(2L).name("Other").email("other@test.com")
+                .password("pass").role(Role.builder().roleName("CUSTOMER").build()).build();
+        found(appointment(owner, AppointmentStatus.PENDING));
+
+        assertThrows(BusinessRuleException.class, () -> appointmentService.reschedule(
+                1L, 1L, rescheduleRequest(LocalDateTime.now().plusDays(3))));
+        verify(appointmentRepository, never()).save(any());
+    }
+
+    // ════════════════════════ CUSTOMER: cancel ═══════════════════════════════
+
+    @Test
     void cancelAppointment_shouldThrowWhenAlreadyCompleted() {
-        User u = user();
-        Appointment completed = appointment(u, AppointmentStatus.COMPLETED);
-        when(appointmentRepository.findById(1L)).thenReturn(Optional.of(completed));
+        found(appointment(user(), AppointmentStatus.COMPLETED));
+
+        assertThrows(BusinessRuleException.class,
+                () -> appointmentService.cancelAppointment(1L, 1L));
+    }
+
+    @Test
+    void cancelAppointment_shouldThrowWhenAlreadyCancelled() {
+        found(appointment(user(), AppointmentStatus.CANCELLED));
 
         assertThrows(BusinessRuleException.class,
                 () -> appointmentService.cancelAppointment(1L, 1L));
@@ -153,18 +194,30 @@ class AppointmentServiceImplTest {
         AppointmentResponse result = appointmentService.cancelAppointment(1L, 1L);
 
         assertEquals(AppointmentStatus.CANCELLED, result.getStatus());
+        verify(notificationService).sendNotification(eq(1L), any(), eq("APPOINTMENT"));
+    }
+
+    @Test
+    void cancelAppointment_shouldAllowCancellingApprovedAppointment() {
+        found(appointment(user(), AppointmentStatus.APPROVED));
+        saveReturnsArgument();
+
+        AppointmentResponse result = appointmentService.cancelAppointment(1L, 1L);
+
+        assertEquals(AppointmentStatus.CANCELLED, result.getStatus());
     }
 
     @Test
     void cancelAppointment_shouldThrowWhenAccessedByDifferentUser() {
         User owner = User.builder().userId(2L).name("Other").email("other@test.com")
                 .password("pass").role(Role.builder().roleName("CUSTOMER").build()).build();
-        Appointment pending = appointment(owner, AppointmentStatus.PENDING);
-        when(appointmentRepository.findById(1L)).thenReturn(Optional.of(pending));
+        found(appointment(owner, AppointmentStatus.PENDING));
 
         assertThrows(BusinessRuleException.class,
                 () -> appointmentService.cancelAppointment(1L, 1L));
     }
+
+    // ════════════════════════ CUSTOMER / ADMIN: queries ══════════════════════
 
     @Test
     void getAppointmentsByUser_shouldReturnUserAppointments() {
@@ -179,14 +232,206 @@ class AppointmentServiceImplTest {
     }
 
     @Test
+    void getAllAppointments_shouldReturnEveryAppointment() {
+        User u = user();
+        when(appointmentRepository.findAll()).thenReturn(List.of(
+                appointment(u, AppointmentStatus.PENDING),
+                appointment(u, AppointmentStatus.APPROVED)));
+
+        List<AppointmentResponse> result = appointmentService.getAllAppointments();
+
+        assertEquals(2, result.size());
+    }
+
+    @Test
     void getAppointmentsByStatus_shouldReturnMatchingAppointments() {
         User u = user();
-        when(appointmentRepository.findByStatus(AppointmentStatus.CONFIRMED))
-                .thenReturn(List.of(appointment(u, AppointmentStatus.CONFIRMED)));
+        when(appointmentRepository.findByStatus(AppointmentStatus.APPROVED))
+                .thenReturn(List.of(appointment(u, AppointmentStatus.APPROVED)));
 
         List<AppointmentResponse> result =
-                appointmentService.getAppointmentsByStatus(AppointmentStatus.CONFIRMED);
+                appointmentService.getAppointmentsByStatus(AppointmentStatus.APPROVED);
 
         assertEquals(1, result.size());
+        assertEquals(AppointmentStatus.APPROVED, result.get(0).getStatus());
+    }
+
+    // ════════════════════════ ADMIN: approve ═════════════════════════════════
+
+    @Test
+    void approveAppointment_shouldSetStatusToApprovedAndNotifyCustomer() {
+        found(appointment(user(), AppointmentStatus.PENDING));
+        saveReturnsArgument();
+
+        AppointmentResponse result = appointmentService.approveAppointment(1L);
+
+        assertEquals(AppointmentStatus.APPROVED, result.getStatus());
+        verify(notificationService).sendNotification(eq(1L), any(), eq("APPOINTMENT"));
+    }
+
+    @Test
+    void approveAppointment_shouldAllowRescheduledAppointment() {
+        found(appointment(user(), AppointmentStatus.RESCHEDULED));
+        saveReturnsArgument();
+
+        AppointmentResponse result = appointmentService.approveAppointment(1L);
+
+        assertEquals(AppointmentStatus.APPROVED, result.getStatus());
+    }
+
+    @Test
+    void approveAppointment_shouldThrowWhenCancelled() {
+        found(appointment(user(), AppointmentStatus.CANCELLED));
+
+        assertThrows(BusinessRuleException.class,
+                () -> appointmentService.approveAppointment(1L));
+        verify(appointmentRepository, never()).save(any());
+    }
+
+    @Test
+    void approveAppointment_shouldThrowWhenAlreadyApproved() {
+        found(appointment(user(), AppointmentStatus.APPROVED));
+
+        assertThrows(BusinessRuleException.class,
+                () -> appointmentService.approveAppointment(1L));
+    }
+
+    @Test
+    void approveAppointment_shouldThrowWhenNotFound() {
+        when(appointmentRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> appointmentService.approveAppointment(99L));
+    }
+
+    // ════════════════════════ ADMIN: reschedule ══════════════════════════════
+
+    @Test
+    void adminReschedule_shouldSetNewDateAndRescheduledStatus() {
+        LocalDateTime newDate = LocalDateTime.now().plusDays(7);
+        found(appointment(user(), AppointmentStatus.PENDING));
+        saveReturnsArgument();
+
+        AppointmentResponse result =
+                appointmentService.adminReschedule(1L, rescheduleRequest(newDate));
+
+        assertEquals(newDate, result.getDate());
+        assertEquals(AppointmentStatus.RESCHEDULED, result.getStatus());
+        verify(notificationService).sendNotification(eq(1L), any(), eq("APPOINTMENT"));
+    }
+
+    @Test
+    void adminReschedule_shouldWorkOnAnotherUsersAppointment() {
+        User owner = User.builder().userId(2L).name("Other").email("other@test.com")
+                .password("pass").role(Role.builder().roleName("CUSTOMER").build()).build();
+        found(appointment(owner, AppointmentStatus.APPROVED));
+        saveReturnsArgument();
+
+        AppointmentResponse result = appointmentService.adminReschedule(
+                1L, rescheduleRequest(LocalDateTime.now().plusDays(2)));
+
+        assertEquals(AppointmentStatus.RESCHEDULED, result.getStatus());
+        verify(notificationService).sendNotification(eq(2L), any(), eq("APPOINTMENT"));
+    }
+
+    @Test
+    void adminReschedule_shouldThrowWhenCancelled() {
+        found(appointment(user(), AppointmentStatus.CANCELLED));
+
+        assertThrows(BusinessRuleException.class, () -> appointmentService.adminReschedule(
+                1L, rescheduleRequest(LocalDateTime.now().plusDays(2))));
+        verify(appointmentRepository, never()).save(any());
+    }
+
+    @Test
+    void adminReschedule_shouldThrowWhenNotFound() {
+        when(appointmentRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> appointmentService.adminReschedule(
+                99L, rescheduleRequest(LocalDateTime.now().plusDays(2))));
+    }
+
+    // ════════════════════════ ADMIN: cancel ══════════════════════════════════
+
+    @Test
+    void adminCancel_shouldSetStatusToCancelledAndNotifyCustomer() {
+        found(appointment(user(), AppointmentStatus.APPROVED));
+        saveReturnsArgument();
+
+        AppointmentResponse result = appointmentService.adminCancel(1L);
+
+        assertEquals(AppointmentStatus.CANCELLED, result.getStatus());
+        verify(notificationService).sendNotification(eq(1L), any(), eq("APPOINTMENT"));
+    }
+
+    @Test
+    void adminCancel_shouldThrowWhenAlreadyCancelled() {
+        found(appointment(user(), AppointmentStatus.CANCELLED));
+
+        assertThrows(BusinessRuleException.class, () -> appointmentService.adminCancel(1L));
+    }
+
+    @Test
+    void adminCancel_shouldThrowWhenCompleted() {
+        found(appointment(user(), AppointmentStatus.COMPLETED));
+
+        assertThrows(BusinessRuleException.class, () -> appointmentService.adminCancel(1L));
+    }
+
+    // ════════════════════════ ADMIN: updateStatus ════════════════════════════
+
+    @Test
+    void updateStatus_approvedShouldApprovePendingAppointment() {
+        found(appointment(user(), AppointmentStatus.PENDING));
+        saveReturnsArgument();
+
+        AppointmentResponse result =
+                appointmentService.updateStatus(1L, AppointmentStatus.APPROVED);
+
+        assertEquals(AppointmentStatus.APPROVED, result.getStatus());
+    }
+
+    @Test
+    void updateStatus_cancelledShouldCancelAppointment() {
+        found(appointment(user(), AppointmentStatus.PENDING));
+        saveReturnsArgument();
+
+        AppointmentResponse result =
+                appointmentService.updateStatus(1L, AppointmentStatus.CANCELLED);
+
+        assertEquals(AppointmentStatus.CANCELLED, result.getStatus());
+    }
+
+    @Test
+    void updateStatus_completedShouldCompleteApprovedAppointment() {
+        found(appointment(user(), AppointmentStatus.APPROVED));
+        saveReturnsArgument();
+
+        AppointmentResponse result =
+                appointmentService.updateStatus(1L, AppointmentStatus.COMPLETED);
+
+        assertEquals(AppointmentStatus.COMPLETED, result.getStatus());
+        verify(notificationService).sendNotification(eq(1L), any(), eq("APPOINTMENT"));
+    }
+
+    @Test
+    void updateStatus_completedShouldThrowWhenNotApproved() {
+        found(appointment(user(), AppointmentStatus.PENDING));
+
+        assertThrows(BusinessRuleException.class,
+                () -> appointmentService.updateStatus(1L, AppointmentStatus.COMPLETED));
+        verify(appointmentRepository, never()).save(any());
+    }
+
+    @Test
+    void updateStatus_rescheduledShouldBeRejected() {
+        assertThrows(BusinessRuleException.class,
+                () -> appointmentService.updateStatus(1L, AppointmentStatus.RESCHEDULED));
+    }
+
+    @Test
+    void updateStatus_pendingShouldBeRejected() {
+        assertThrows(BusinessRuleException.class,
+                () -> appointmentService.updateStatus(1L, AppointmentStatus.PENDING));
     }
 }
