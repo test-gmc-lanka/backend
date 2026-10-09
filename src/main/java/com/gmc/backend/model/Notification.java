@@ -42,8 +42,8 @@ public class Notification {
     private String type;
 
     @Builder.Default
-    @Column(nullable = false)
-    private Boolean read = false;
+    @Column(name = "is_read", nullable = false)
+    private Boolean isRead = false;
 
     @NotNull(message = "Created date is required")
     @Builder.Default

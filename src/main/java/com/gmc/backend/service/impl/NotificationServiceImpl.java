@@ -32,7 +32,7 @@ public class NotificationServiceImpl implements NotificationService {
     public long countUnread(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
-        return notificationRepository.countByUserAndReadFalse(user);
+        return notificationRepository.countByUserAndIsReadFalse(user);
     }
 
     @Override
@@ -61,7 +61,7 @@ public class NotificationServiceImpl implements NotificationService {
                 .notificationId(n.getNotificationId())
                 .message(n.getMessage())
                 .type(n.getType())
-                .read(n.getRead())
+                .read(n.getIsRead())
                 .createdAt(n.getCreatedAt())
                 .build();
     }
