@@ -10,4 +10,6 @@ public class AuthResponse {
     private String role;
     private String name;
     private Long userId;
+    private String email;
+    private String profileImageUrl;
 }

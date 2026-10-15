@@ -3,6 +3,8 @@ package com.gmc.backend.exception;
 import com.gmc.backend.dto.response.ApiErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -104,6 +106,26 @@ public class GlobalExceptionHandler {
                         .success(false)
                         .error("INVALID_STATUS_TRANSITION")
                         .message(ex.getMessage())
+                        .build());
+    }
+
+    @ExceptionHandler(DisabledException.class)
+    public ResponseEntity<ApiErrorResponse> handleDisabled(DisabledException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ApiErrorResponse.builder()
+                        .success(false)
+                        .error("ACCOUNT_DEACTIVATED")
+                        .message("Your account has been deactivated. Please contact GMC Lanka.")
+                        .build());
+    }
+
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ApiErrorResponse> handleBadCredentials(BadCredentialsException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiErrorResponse.builder()
+                        .success(false)
+                        .error("INVALID_CREDENTIALS")
+                        .message("Invalid email or password")
                         .build());
     }
 

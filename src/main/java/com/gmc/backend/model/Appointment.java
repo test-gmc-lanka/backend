@@ -48,6 +48,14 @@ public class Appointment {
     @Column(nullable = false)
     private AppointmentStatus status;
 
+    // Online meeting URL (Google Meet, Zoom, ...) shared when the admin approves
+    @Column(name = "meeting_link", length = 500)
+    private String meetingLink;
+
+    // Latest note from the admin (approve / reschedule / cancel / complete), shown to the customer
+    @Column(name = "admin_note", length = 1000)
+    private String adminNote;
+
     @NotNull(message = "User is required")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)

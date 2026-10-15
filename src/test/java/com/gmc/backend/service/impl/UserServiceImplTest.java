@@ -6,22 +6,26 @@ import com.gmc.backend.dto.request.UpdateProfileRequest;
 import com.gmc.backend.dto.response.UserResponse;
 import com.gmc.backend.exception.BusinessRuleException;
 import com.gmc.backend.exception.DuplicateEmailException;
+import com.gmc.backend.exception.InvalidFileException;
 import com.gmc.backend.exception.ResourceNotFoundException;
 import com.gmc.backend.model.Role;
 import com.gmc.backend.model.User;
 import com.gmc.backend.repository.RoleRepository;
 import com.gmc.backend.repository.UserRepository;
+import com.gmc.backend.service.FileStorageService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -39,6 +43,9 @@ class UserServiceImplTest {
 
     @Mock
     private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private FileStorageService fileStorageService;
 
     @InjectMocks
     private UserServiceImpl userService;
@@ -60,6 +67,40 @@ class UserServiceImplTest {
 
         assertEquals("Alice", result.getName());
         assertEquals("alice@example.com", result.getEmail());
+    }
+
+    @Test
+    void updateProfileImage_shouldStoreInAvatarsFolderAndSaveUrl() {
+        MockMultipartFile file = new MockMultipartFile("file", "me.png", "image/png", new byte[] {1});
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user()));
+        when(fileStorageService.storeImages(List.of(file), "avatars"))
+                .thenReturn(List.of("/uploads/avatars/me.png"));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        UserResponse result = userService.updateProfileImage(1L, file);
+
+        assertEquals("/uploads/avatars/me.png", result.getProfileImageUrl());
+    }
+
+    @Test
+    void updateProfileImage_shouldThrowWhenNothingStored() {
+        MockMultipartFile empty = new MockMultipartFile("file", "me.png", "image/png", new byte[0]);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user()));
+        when(fileStorageService.storeImages(List.of(empty), "avatars")).thenReturn(List.of());
+
+        assertThrows(InvalidFileException.class, () -> userService.updateProfileImage(1L, empty));
+    }
+
+    @Test
+    void removeProfileImage_shouldClearUrl() {
+        User user = user();
+        user.setProfileImageUrl("/uploads/avatars/old.png");
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        UserResponse result = userService.removeProfileImage(1L);
+
+        assertNull(result.getProfileImageUrl());
     }
 
     @Test

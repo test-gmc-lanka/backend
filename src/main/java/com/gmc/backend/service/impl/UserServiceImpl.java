@@ -6,16 +6,19 @@ import com.gmc.backend.dto.request.UpdateProfileRequest;
 import com.gmc.backend.dto.response.UserResponse;
 import com.gmc.backend.exception.BusinessRuleException;
 import com.gmc.backend.exception.DuplicateEmailException;
+import com.gmc.backend.exception.InvalidFileException;
 import com.gmc.backend.exception.ResourceNotFoundException;
 import com.gmc.backend.model.Role;
 import com.gmc.backend.model.User;
 import com.gmc.backend.repository.RoleRepository;
 import com.gmc.backend.repository.UserRepository;
+import com.gmc.backend.service.FileStorageService;
 import com.gmc.backend.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -27,6 +30,7 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final FileStorageService fileStorageService;
 
     @Override
     public UserResponse getProfile(Long userId) {
@@ -58,6 +62,27 @@ public class UserServiceImpl implements UserService {
         }
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
+    }
+
+    @Override
+    @Transactional
+    public UserResponse updateProfileImage(Long userId, MultipartFile file) {
+        User user = findById(userId);
+        List<String> stored = fileStorageService.storeImages(
+                file == null ? List.of() : List.of(file), "avatars");
+        if (stored.isEmpty()) {
+            throw new InvalidFileException("No image was provided");
+        }
+        user.setProfileImageUrl(stored.get(0));
+        return toResponse(userRepository.save(user));
+    }
+
+    @Override
+    @Transactional
+    public UserResponse removeProfileImage(Long userId) {
+        User user = findById(userId);
+        user.setProfileImageUrl(null);
+        return toResponse(userRepository.save(user));
     }
 
     @Override
@@ -126,6 +151,7 @@ public class UserServiceImpl implements UserService {
                 .address(user.getAddress())
                 .role(user.getRole().getRoleName())
                 .active(user.getActive())
+                .profileImageUrl(user.getProfileImageUrl())
                 .build();
     }
 }

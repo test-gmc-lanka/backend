@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Data
 public class ProductRequest {
@@ -25,7 +26,10 @@ public class ProductRequest {
 
     private String material;
 
+    // Cover image; must be one of imageUrls (defaults to the first image)
     private String imageUrl;
+
+    private List<String> imageUrls;
 
     @Min(value = 0, message = "Stock quantity must be at least 0")
     private Integer stockQuantity;

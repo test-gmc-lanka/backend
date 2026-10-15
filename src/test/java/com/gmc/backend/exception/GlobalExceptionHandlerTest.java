@@ -5,6 +5,8 @@ import com.gmc.backend.model.OrderStatus;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -34,6 +36,27 @@ class GlobalExceptionHandlerTest {
         assertFalse(response.getBody().isSuccess());
         assertEquals("DUPLICATE_EMAIL", response.getBody().getError());
         assertTrue(response.getBody().getMessage().contains("test@example.com"));
+    }
+
+    @Test
+    void handleDisabled_shouldReturn403WithDeactivatedMessage() {
+        ResponseEntity<ApiErrorResponse> response =
+                handler.handleDisabled(new DisabledException("User is disabled"));
+
+        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("ACCOUNT_DEACTIVATED", response.getBody().getError());
+        assertTrue(response.getBody().getMessage().contains("deactivated"));
+    }
+
+    @Test
+    void handleBadCredentials_shouldReturn401() {
+        ResponseEntity<ApiErrorResponse> response =
+                handler.handleBadCredentials(new BadCredentialsException("Bad credentials"));
+
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("INVALID_CREDENTIALS", response.getBody().getError());
     }
 
     @Test

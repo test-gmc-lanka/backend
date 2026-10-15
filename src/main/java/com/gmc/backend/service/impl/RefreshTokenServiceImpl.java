@@ -71,6 +71,12 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
                     "REFRESH_TOKEN_EXPIRED", "Refresh token has expired");
         }
 
+        if (Boolean.FALSE.equals(existing.getUser().getActive())) {
+            refreshTokenRepository.deleteAllByUser(existing.getUser());
+            throw new InvalidTokenException(
+                    "ACCOUNT_DEACTIVATED", "Your account has been deactivated");
+        }
+
         existing.setUsed(true);
         refreshTokenRepository.save(existing);
 

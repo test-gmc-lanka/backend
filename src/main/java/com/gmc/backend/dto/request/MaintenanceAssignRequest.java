@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Data
 public class MaintenanceAssignRequest {
@@ -13,8 +14,12 @@ public class MaintenanceAssignRequest {
     @NotBlank(message = "Description is required")
     private String description;
 
-    @NotNull(message = "Product ID is required")
+    // Either productId (catalog product) or title (custom design) must be given
     private Long productId;
+
+    private String title;
+
+    private List<String> imageUrls;
 
     @NotNull(message = "Technician ID is required")
     private Long technicianId;

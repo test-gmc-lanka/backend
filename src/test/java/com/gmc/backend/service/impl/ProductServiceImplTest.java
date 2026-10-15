@@ -7,11 +7,13 @@ import com.gmc.backend.model.Product;
 import com.gmc.backend.model.ProductCategory;
 import com.gmc.backend.repository.ProductCategoryRepository;
 import com.gmc.backend.repository.ProductRepository;
+import com.gmc.backend.service.FileStorageService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockMultipartFile;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -35,6 +37,8 @@ class ProductServiceImplTest {
     private ProductRepository productRepository;
     @Mock
     private ProductCategoryRepository categoryRepository;
+    @Mock
+    private FileStorageService fileStorageService;
 
     @InjectMocks
     private ProductServiceImpl productService;
@@ -162,6 +166,41 @@ class ProductServiceImplTest {
     }
 
     @Test
+    void createProduct_withGallery_keepsChosenCover() {
+        when(categoryRepository.findById(1L)).thenReturn(Optional.of(category()));
+        when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        ProductRequest request = new ProductRequest();
+        request.setName("New");
+        request.setPrice(new BigDecimal("120"));
+        request.setCategoryId(1L);
+        request.setImageUrls(List.of("a.jpg", "b.jpg", "c.jpg"));
+        request.setImageUrl("b.jpg");
+
+        ProductResponse result = productService.createProduct(request);
+
+        assertThat(result.getImageUrls()).containsExactly("a.jpg", "b.jpg", "c.jpg");
+        assertThat(result.getImageUrl()).isEqualTo("b.jpg");
+    }
+
+    @Test
+    void createProduct_coverNotInGallery_defaultsToFirstImage() {
+        when(categoryRepository.findById(1L)).thenReturn(Optional.of(category()));
+        when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        ProductRequest request = new ProductRequest();
+        request.setName("New");
+        request.setPrice(new BigDecimal("120"));
+        request.setCategoryId(1L);
+        request.setImageUrls(List.of("a.jpg", "b.jpg"));
+        request.setImageUrl("missing.jpg");
+
+        ProductResponse result = productService.createProduct(request);
+
+        assertThat(result.getImageUrl()).isEqualTo("a.jpg");
+    }
+
+    @Test
     void createProduct_categoryNotFound_throwsAndDoesNotSave() {
         when(categoryRepository.findById(1L)).thenReturn(Optional.empty());
 
@@ -221,5 +260,16 @@ class ProductServiceImplTest {
         assertThatThrownBy(() -> productService.deleteProduct(99L))
                 .isInstanceOf(ResourceNotFoundException.class);
         verify(productRepository, never()).deleteById(99L);
+    }
+
+    @Test
+    void uploadImages_delegatesToFileStorageInProductsFolder() {
+        MockMultipartFile file = new MockMultipartFile(
+                "files", "chair.jpg", "image/jpeg", new byte[] {1});
+        when(fileStorageService.storeImages(List.of(file), "products"))
+                .thenReturn(List.of("/uploads/products/x.jpg"));
+
+        assertThat(productService.uploadImages(List.of(file)))
+                .containsExactly("/uploads/products/x.jpg");
     }
 }

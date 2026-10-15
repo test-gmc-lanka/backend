@@ -5,6 +5,8 @@ import com.gmc.backend.dto.request.CreateUserRequest;
 import com.gmc.backend.dto.request.UpdateProfileRequest;
 import com.gmc.backend.dto.response.UserResponse;
 
+import org.springframework.web.multipart.MultipartFile;
+
 import java.util.List;
 
 public interface UserService {
@@ -14,6 +16,10 @@ public interface UserService {
     UserResponse updateProfile(Long userId, UpdateProfileRequest request);
 
     void changePassword(Long userId, ChangePasswordRequest request);
+
+    UserResponse updateProfileImage(Long userId, MultipartFile file);
+
+    UserResponse removeProfileImage(Long userId);
 
     List<UserResponse> getAllUsers();
 

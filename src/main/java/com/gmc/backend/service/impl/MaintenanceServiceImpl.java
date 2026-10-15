@@ -2,6 +2,7 @@ package com.gmc.backend.service.impl;
 
 import com.gmc.backend.dto.request.MaintenanceAssignRequest;
 import com.gmc.backend.dto.response.MaintenanceResponse;
+import com.gmc.backend.exception.BusinessRuleException;
 import com.gmc.backend.exception.ResourceNotFoundException;
 import com.gmc.backend.model.Maintenance;
 import com.gmc.backend.model.Product;
@@ -14,7 +15,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,15 +34,31 @@ public class MaintenanceServiceImpl implements MaintenanceService {
         User technician = userRepository.findById(request.getTechnicianId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Technician not found: " + request.getTechnicianId()));
-        Product product = productRepository.findById(request.getProductId())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Product not found: " + request.getProductId()));
+        String title = request.getTitle() == null ? null : request.getTitle().trim();
+        if (request.getProductId() == null && (title == null || title.isEmpty())) {
+            throw new BusinessRuleException("Select a product or enter a custom design name");
+        }
+        Product product = null;
+        if (request.getProductId() != null) {
+            product = productRepository.findById(request.getProductId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Product not found: " + request.getProductId()));
+        }
+        List<String> images = request.getImageUrls() == null
+                ? new ArrayList<>()
+                : request.getImageUrls().stream()
+                        .filter(Objects::nonNull)
+                        .filter(url -> !url.isBlank())
+                        .distinct()
+                        .collect(Collectors.toCollection(ArrayList::new));
         Maintenance maintenance = Maintenance.builder()
                 .description(request.getDescription())
                 .status("ASSIGNED")
                 .cost(request.getCost())
                 .user(technician)
                 .product(product)
+                .title(product == null ? title : null)
+                .imageUrls(images)
                 .build();
         return toResponse(maintenanceRepository.save(maintenance));
     }
@@ -74,8 +93,10 @@ public class MaintenanceServiceImpl implements MaintenanceService {
                 .description(m.getDescription())
                 .status(m.getStatus())
                 .cost(m.getCost())
-                .productId(m.getProduct().getProductId())
-                .productName(m.getProduct().getName())
+                .productId(m.getProduct() == null ? null : m.getProduct().getProductId())
+                .productName(m.getProduct() == null ? null : m.getProduct().getName())
+                .title(m.getTitle())
+                .imageUrls(m.getImageUrls() == null ? List.of() : new ArrayList<>(m.getImageUrls()))
                 .technicianId(m.getUser().getUserId())
                 .technicianName(m.getUser().getName())
                 .build();

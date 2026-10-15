@@ -16,4 +16,6 @@ public class AppointmentResponse {
     private AppointmentStatus status;
     private Long userId;
     private String userName;
+    private String meetingLink;
+    private String adminNote;
 }

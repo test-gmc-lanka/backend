@@ -1,6 +1,9 @@
 package com.gmc.backend.model;
 
 import jakarta.persistence.Id;
+import jakarta.persistence.CollectionTable;
+import jakarta.persistence.ElementCollection;
+import jakarta.persistence.OrderColumn;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Column;
@@ -25,6 +28,8 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "products")
@@ -60,8 +65,16 @@ public class Product {
     @Column
     private String material;
 
+    // Cover image shown on product listings; always one of imageUrls when images exist
     @Column(name = "image_url")
     private String imageUrl;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "product_images", joinColumns = @JoinColumn(name = "product_id"))
+    @OrderColumn(name = "sort_order")
+    @Column(name = "image_url", nullable = false)
+    @Builder.Default
+    private List<String> imageUrls = new ArrayList<>();
 
     @Min(value = 0, message = "Stock quantity must be at least 0")
     @Builder.Default

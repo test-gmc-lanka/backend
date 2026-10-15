@@ -8,11 +8,15 @@ import com.gmc.backend.model.Product;
 import com.gmc.backend.model.ProductCategory;
 import com.gmc.backend.repository.ProductCategoryRepository;
 import com.gmc.backend.repository.ProductRepository;
+import com.gmc.backend.service.FileStorageService;
 import com.gmc.backend.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -21,6 +25,7 @@ public class ProductServiceImpl implements ProductService {
 
     private final ProductRepository productRepository;
     private final ProductCategoryRepository categoryRepository;
+    private final FileStorageService fileStorageService;
 
     @Override
     public List<ProductResponse> getAllProducts() {
@@ -69,9 +74,9 @@ public class ProductServiceImpl implements ProductService {
                 .price(request.getPrice())
                 .category(category)
                 .material(request.getMaterial())
-                .imageUrl(request.getImageUrl())
                 .stockQuantity(request.getStockQuantity() != null ? request.getStockQuantity() : 0)
                 .build();
+        applyImages(product, request);
         return toResponse(productRepository.save(product));
     }
 
@@ -86,7 +91,7 @@ public class ProductServiceImpl implements ProductService {
         product.setPrice(request.getPrice());
         product.setCategory(category);
         product.setMaterial(request.getMaterial());
-        product.setImageUrl(request.getImageUrl());
+        applyImages(product, request);
         if (request.getStockQuantity() != null) {
             product.setStockQuantity(request.getStockQuantity());
         }
@@ -97,6 +102,39 @@ public class ProductServiceImpl implements ProductService {
     public void deleteProduct(Long productId) {
         findById(productId);
         productRepository.deleteById(productId);
+    }
+
+    @Override
+    public List<String> uploadImages(List<MultipartFile> files) {
+        return fileStorageService.storeImages(files, "products");
+    }
+
+    /**
+     * Copies the gallery from the request and picks the cover image. Falls back to the
+     * legacy single imageUrl when no gallery is sent, so older clients keep working.
+     */
+    private void applyImages(Product product, ProductRequest request) {
+        List<String> images = request.getImageUrls() == null
+                ? new ArrayList<>()
+                : request.getImageUrls().stream()
+                        .filter(Objects::nonNull)
+                        .map(String::trim)
+                        .filter(url -> !url.isEmpty())
+                        .distinct()
+                        .collect(Collectors.toCollection(ArrayList::new));
+        String cover = request.getImageUrl();
+        if (images.isEmpty() && cover != null && !cover.isBlank()) {
+            images.add(cover.trim());
+        }
+        if (cover == null || !images.contains(cover.trim())) {
+            cover = images.isEmpty() ? null : images.get(0);
+        }
+        if (product.getImageUrls() == null) {
+            product.setImageUrls(new ArrayList<>());
+        }
+        product.getImageUrls().clear();
+        product.getImageUrls().addAll(images);
+        product.setImageUrl(cover == null ? null : cover.trim());
     }
 
     private Product findById(Long productId) {
@@ -117,7 +155,16 @@ public class ProductServiceImpl implements ProductService {
                 .category(categoryResponse)
                 .material(product.getMaterial())
                 .imageUrl(product.getImageUrl())
+                .imageUrls(galleryOf(product))
                 .stockQuantity(product.getStockQuantity())
                 .build();
+    }
+
+    // Products created before galleries existed only have the single imageUrl
+    private List<String> galleryOf(Product product) {
+        if (product.getImageUrls() != null && !product.getImageUrls().isEmpty()) {
+            return new ArrayList<>(product.getImageUrls());
+        }
+        return product.getImageUrl() == null ? List.of() : List.of(product.getImageUrl());
     }
 }

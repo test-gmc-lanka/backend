@@ -46,6 +46,11 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-validation</artifactId>
 		</dependency>
+		<!--  ── Email (password reset, appointment updates) ─  -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-mail</artifactId>
+		</dependency>
 		<!--  ── API Docs (Swagger UI) ───────────────────────  -->
 		<dependency>
 			<groupId>org.springdoc</groupId>

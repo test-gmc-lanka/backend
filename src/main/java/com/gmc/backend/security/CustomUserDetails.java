@@ -51,7 +51,8 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        // Deactivated users are rejected at login and by the JWT filter; null counts as active
+        return !Boolean.FALSE.equals(user.getActive());
     }
 
     public Long getId() {
