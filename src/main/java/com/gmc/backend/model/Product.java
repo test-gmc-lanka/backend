@@ -88,8 +88,12 @@ public class Product {
     @PrePersist
     @PreUpdate
     void applyDefaults() {
-        if (stockQuantity == null) stockQuantity = 0;
-        if (isActive == null) isActive = true;
+        if (stockQuantity == null) {
+            stockQuantity = 0;
+        }
+        if (isActive == null) {
+            isActive = true;
+        }
         stockQty = stockQuantity;
     }
 }
