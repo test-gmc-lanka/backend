@@ -1,5 +1,8 @@
 package com.gmc.backend.service.impl;
 
+import com.gmc.backend.repository.RefreshTokenRepository;
+import java.util.Set;
+import java.util.Locale;
 import com.gmc.backend.dto.request.ChangePasswordRequest;
 import com.gmc.backend.dto.request.CreateUserRequest;
 import com.gmc.backend.dto.request.UpdateProfileRequest;
@@ -31,7 +34,7 @@ public class UserServiceImpl implements UserService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final FileStorageService fileStorageService;
-
+    private final RefreshTokenRepository refreshTokenRepository;
     @Override
     public UserResponse getProfile(Long userId) {
         return toResponse(findById(userId));
@@ -62,6 +65,8 @@ public class UserServiceImpl implements UserService {
         }
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
+        // Revoke every session; the controller then starts a fresh one for this browser
+        refreshTokenRepository.deleteAllByUser(user);
     }
 
     @Override
@@ -103,15 +108,20 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserResponse createUser(CreateUserRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new DuplicateEmailException(request.getEmail());
+        String email = request.getEmail().trim().toLowerCase(Locale.ROOT);
+        if (userRepository.existsByEmail(email)) {
+            throw new DuplicateEmailException(email);
         }
-        Role role = roleRepository.findByRoleName(request.getRole().toUpperCase())
-                .orElseGet(() -> roleRepository.save(
-                        Role.builder().roleName(request.getRole().toUpperCase()).build()));
+        // Only the three real roles; a typo must not silently create a new, useless role
+        String roleName = request.getRole().trim().toUpperCase(Locale.ROOT);
+        if (!Set.of("CUSTOMER", "TECHNICIAN", "ADMIN").contains(roleName)) {
+            throw new BusinessRuleException("Role must be CUSTOMER, TECHNICIAN or ADMIN");
+        }
+        Role role = roleRepository.findByRoleName(roleName)
+                .orElseGet(() -> roleRepository.save(Role.builder().roleName(roleName).build()));
         User user = User.builder()
-                .name(request.getName())
-                .email(request.getEmail())
+                .name(request.getName().trim())
+                .email(email)
                 .password(passwordEncoder.encode(request.getPassword()))
                 .phone(request.getPhone())
                 .address(request.getAddress())
@@ -125,6 +135,13 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public UserResponse deactivateUser(Long userId) {
         User user = findById(userId);
+        if ("ADMIN".equals(user.getRole().getRoleName())) {
+            long activeAdmins = userRepository.findByRole_RoleName("ADMIN").stream()
+                    .filter(u -> !Boolean.FALSE.equals(u.getActive())).count();
+            if (activeAdmins <= 1) {
+                throw new BusinessRuleException("You can't deactivate the last active admin");
+            }
+        }
         user.setActive(false);
         return toResponse(userRepository.save(user));
     }

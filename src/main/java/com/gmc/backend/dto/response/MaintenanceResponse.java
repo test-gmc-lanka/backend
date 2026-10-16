@@ -4,6 +4,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 @Data
@@ -20,4 +21,5 @@ public class MaintenanceResponse {
     private List<String> imageUrls;
     private Long technicianId;
     private String technicianName;
+    private LocalDate deadline;
 }

@@ -1,5 +1,8 @@
 package com.gmc.backend.model;
 
+import jakarta.persistence.UniqueConstraint;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -12,7 +15,8 @@ import lombok.Data;
 
 @Data
 @Entity
-@Table(name = "cart_items")
+@Table(name = "cart_items",
+        uniqueConstraints = @UniqueConstraint(name = "uk_cart_item_product", columnNames = {"cart_id", "product_id"}))
 public class CartItem {
 
     @Id
@@ -21,6 +25,8 @@ public class CartItem {
 
     @ManyToOne
     @JoinColumn(name = "cart_id", nullable = false)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private Cart cart;
 
     @ManyToOne

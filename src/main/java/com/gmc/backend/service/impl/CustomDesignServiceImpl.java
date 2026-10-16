@@ -31,9 +31,10 @@ import java.util.stream.Collectors;
 public class CustomDesignServiceImpl implements CustomDesignService {
 
     private static final Set<String> ALLOWED_EXTENSIONS =
-            Set.of("svg", "dxf", "pdf", "png", "jpg", "jpeg", "cad", "dwg");
+            // No SVG: an SVG can contain JavaScript that would run on our domain when opened
+            Set.of("dxf", "pdf", "png", "jpg", "jpeg", "cad", "dwg");
 
-    @Value("${app.upload.dir:./uploads}")
+    @Value("${app.upload-dir:uploads/}")
     private String uploadDir;
 
     private final CustomDesignRepository customDesignRepository;

@@ -30,9 +30,10 @@ public class TechnicianController {
 
     @PatchMapping("/tasks/{maintenanceId}/status")
     public ResponseEntity<MaintenanceResponse> updateTaskStatus(
+            @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable Long maintenanceId,
             @RequestParam String status) {
         return ResponseEntity.ok(
-                maintenanceService.updateMaintenanceStatus(maintenanceId, status));
+                maintenanceService.updateMaintenanceStatus(maintenanceId, user.getId(), status));
     }
 }

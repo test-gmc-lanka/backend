@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Builder
@@ -18,4 +19,7 @@ public class AppointmentResponse {
     private String userName;
     private String meetingLink;
     private String adminNote;
+    private List<String> imageUrls;
+    private Long categoryId;
+    private String categoryName;
 }

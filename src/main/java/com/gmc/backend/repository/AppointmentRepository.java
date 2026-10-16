@@ -1,5 +1,6 @@
 package com.gmc.backend.repository;
 
+import com.gmc.backend.model.ProductCategory;
 import com.gmc.backend.model.Appointment;
 import com.gmc.backend.model.AppointmentStatus;
 import com.gmc.backend.model.User;
@@ -18,4 +19,6 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     List<Appointment> findByStatus(AppointmentStatus status);
 
     List<Appointment> findByUserUserIdAndStatus(Long userId, AppointmentStatus status);
+
+    boolean existsByCategory(ProductCategory category);
 }

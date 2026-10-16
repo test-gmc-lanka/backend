@@ -1,9 +1,12 @@
 package com.gmc.backend.controller;
 
+import org.springframework.web.bind.annotation.PatchMapping;
 import com.gmc.backend.dto.request.ProductRequest;
 import com.gmc.backend.dto.response.CategoryResponse;
 import com.gmc.backend.dto.response.ProductResponse;
+import com.gmc.backend.dto.response.ProductReviewsResponse;
 import com.gmc.backend.service.CategoryService;
+import com.gmc.backend.service.FeedbackService;
 import com.gmc.backend.service.ProductService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +35,7 @@ public class ProductController {
 
     private final ProductService productService;
     private final CategoryService categoryService;
+    private final FeedbackService feedbackService;
 
     @GetMapping
     public ResponseEntity<List<ProductResponse>> getAll(
@@ -53,6 +57,12 @@ public class ProductController {
     @GetMapping("/{productId}")
     public ResponseEntity<ProductResponse> getById(@PathVariable Long productId) {
         return ResponseEntity.ok(productService.getProductById(productId));
+    }
+
+    // Public: real customer reviews (verified purchases) for the product page
+    @GetMapping("/{productId}/reviews")
+    public ResponseEntity<ProductReviewsResponse> getReviews(@PathVariable Long productId) {
+        return ResponseEntity.ok(feedbackService.getProductReviews(productId));
     }
 
     @GetMapping("/categories")
@@ -80,6 +90,14 @@ public class ProductController {
         return ResponseEntity.ok(productService.updateProduct(productId, request));
     }
 
+    // Restore an archived product (or archive it) without deleting anything
+    @PatchMapping("/{productId}/active")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ProductResponse> setActive(@PathVariable Long productId, @RequestParam boolean active) {
+        return ResponseEntity.ok(productService.setActive(productId, active));
+    }
+
+    // Archives the product; it disappears from the shop but past orders keep it
     @DeleteMapping("/{productId}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable Long productId) {

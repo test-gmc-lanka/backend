@@ -1,5 +1,7 @@
 package com.gmc.backend.service.impl;
 
+import static org.mockito.Mockito.never;
+import com.gmc.backend.repository.RefreshTokenRepository;
 import com.gmc.backend.dto.request.ChangePasswordRequest;
 import com.gmc.backend.dto.request.CreateUserRequest;
 import com.gmc.backend.dto.request.UpdateProfileRequest;
@@ -46,6 +48,9 @@ class UserServiceImplTest {
 
     @Mock
     private FileStorageService fileStorageService;
+
+    @Mock
+    private RefreshTokenRepository refreshTokenRepository;
 
     @InjectMocks
     private UserServiceImpl userService;
@@ -153,6 +158,8 @@ class UserServiceImplTest {
         userService.changePassword(1L, req);
 
         assertEquals("new-encoded", u.getPassword());
+        // Other sessions are signed out after a password change
+        verify(refreshTokenRepository).deleteAllByUser(u);
         verify(userRepository).save(u);
     }
 
@@ -234,5 +241,29 @@ class UserServiceImplTest {
 
         assertTrue(u.getActive());
         verify(userRepository).save(u);
+    }
+
+    @Test
+    void deactivateUser_shouldRefuseTheLastActiveAdmin() {
+        User admin = User.builder().userId(5L).name("Admin").email("admin@x.com")
+                .role(Role.builder().roleId(2L).roleName("ADMIN").build()).active(true).build();
+        when(userRepository.findById(5L)).thenReturn(Optional.of(admin));
+        when(userRepository.findByRole_RoleName("ADMIN")).thenReturn(List.of(admin));
+
+        assertThrows(BusinessRuleException.class, () -> userService.deactivateUser(5L));
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void createUser_shouldRejectUnknownRoleInsteadOfCreatingIt() {
+        CreateUserRequest req = new CreateUserRequest();
+        req.setName("Bob");
+        req.setEmail("Bob@Example.com ");
+        req.setPassword("password123");
+        req.setRole("ADMN");
+        when(userRepository.existsByEmail("bob@example.com")).thenReturn(false);
+
+        assertThrows(BusinessRuleException.class, () -> userService.createUser(req));
+        verify(roleRepository, never()).save(any());
     }
 }

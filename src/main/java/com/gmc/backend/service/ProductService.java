@@ -22,7 +22,12 @@ public interface ProductService {
 
     ProductResponse updateProduct(Long productId, ProductRequest request);
 
+    /** Archives the product (it stays on past orders and reviews); see setActive to restore. */
     void deleteProduct(Long productId);
 
+    ProductResponse setActive(Long productId, boolean active);
+
+    /** Admin view: every product, including archived ones. */
+    List<ProductResponse> getAllProductsIncludingArchived();
     List<String> uploadImages(List<MultipartFile> files);
 }

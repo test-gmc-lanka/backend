@@ -1,5 +1,6 @@
 package com.gmc.backend.service.impl;
 
+import com.gmc.backend.model.OrderStatus;
 import com.gmc.backend.dto.response.InvoiceResponse;
 import com.gmc.backend.exception.BusinessRuleException;
 import com.gmc.backend.exception.ResourceNotFoundException;
@@ -34,6 +35,9 @@ public class InvoiceServiceImpl implements InvoiceService {
         if (invoiceRepository.findByOrder_OrderId(orderId).isPresent()) {
             throw new BusinessRuleException("Invoice already exists for order: " + orderId);
         }
+        if (order.getStatus() == OrderStatus.CANCELLED) {
+            throw new BusinessRuleException("Cancelled orders don't get an invoice");
+        }
         if (order.getTotalAmount() == null) {
             throw new BusinessRuleException("Order total amount is not calculated");
         }
@@ -41,7 +45,9 @@ public class InvoiceServiceImpl implements InvoiceService {
         invoice.setOrder(order);
         invoice.setAmount(order.getTotalAmount());
         invoice.setInvoiceDate(LocalDate.now());
-        invoice.setDueDate(LocalDate.now().plusDays(PAYMENT_DUE_DAYS));
+        // Card orders are paid up front; only cash-on-delivery orders have money still due
+        boolean prepaid = order.getPaymentStatus() == PaymentStatus.COMPLETED;
+        invoice.setDueDate(prepaid ? LocalDate.now() : LocalDate.now().plusDays(PAYMENT_DUE_DAYS));
         return toResponse(invoiceRepository.save(invoice));
     }
 
@@ -67,8 +73,8 @@ public class InvoiceServiceImpl implements InvoiceService {
     }
 
     private InvoiceResponse toResponse(Invoice invoice) {
-        boolean paid = invoice.getPayment() != null
-                && invoice.getPayment().getStatus() == PaymentStatus.COMPLETED;
+        // Payments are recorded on the order (Stripe card payment or cash collected on delivery)
+        boolean paid = invoice.getOrder().getPaymentStatus() == PaymentStatus.COMPLETED;
         return InvoiceResponse.builder()
                 .invoiceId(invoice.getInvoiceId())
                 .orderId(invoice.getOrder().getOrderId())

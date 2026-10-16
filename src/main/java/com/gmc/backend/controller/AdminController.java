@@ -1,5 +1,8 @@
 package com.gmc.backend.controller;
 
+import com.gmc.backend.exception.BusinessRuleException;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import com.gmc.backend.security.CustomUserDetails;
 import com.gmc.backend.dto.request.AppointmentStatusRequest;
 import com.gmc.backend.dto.request.CategoryRequest;
 import com.gmc.backend.dto.request.CreateUserRequest;
@@ -120,7 +123,12 @@ public class AdminController {
     }
 
     @PatchMapping("/users/{userId}/deactivate")
-    public ResponseEntity<UserResponse> deactivateUser(@PathVariable Long userId) {
+    public ResponseEntity<UserResponse> deactivateUser(
+            @AuthenticationPrincipal CustomUserDetails admin,
+            @PathVariable Long userId) {
+        if (admin.getId().equals(userId)) {
+            throw new BusinessRuleException("You can't deactivate your own account");
+        }
         return ResponseEntity.ok(userService.deactivateUser(userId));
     }
 
@@ -181,6 +189,14 @@ public class AdminController {
         return ResponseEntity.ok(feedbackService.getAllFeedback());
     }
 
+    // Moderation: hide abusive/spam reviews from the product page (and show them again)
+    @PatchMapping("/feedback/{feedbackId}/visibility")
+    public ResponseEntity<FeedbackResponse> setFeedbackVisibility(
+            @PathVariable Long feedbackId,
+            @RequestParam boolean hidden) {
+        return ResponseEntity.ok(feedbackService.setHidden(feedbackId, hidden));
+    }
+
     @GetMapping("/complaints")
     public ResponseEntity<List<ComplaintResponse>> getAllComplaints() {
         return ResponseEntity.ok(complaintService.getAllComplaints());
@@ -239,6 +255,13 @@ public class AdminController {
             @RequestPart("files") List<MultipartFile> files) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(fileStorageService.storeImages(files, "maintenance"));
+    }
+
+    // ── Products (admin list includes archived ones) ─────────────────────────
+
+    @GetMapping("/products")
+    public ResponseEntity<List<ProductResponse>> getAllProductsForAdmin() {
+        return ResponseEntity.ok(productService.getAllProductsIncludingArchived());
     }
 
     // ── Categories ────────────────────────────────────────────────────────────

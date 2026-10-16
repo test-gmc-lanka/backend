@@ -5,6 +5,7 @@ import com.gmc.backend.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -16,6 +17,9 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     List<Notification> findByUser_UserIdOrderByCreatedAtDesc(Long userId);
 
+    // The bell only needs the most recent ones
+    List<Notification> findTop30ByUser_UserIdOrderByCreatedAtDesc(Long userId);
+
     List<Notification> findByUserAndIsReadFalse(User user);
 
     long countByUserAndIsReadFalse(User user);
@@ -23,4 +27,10 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     @Modifying
     @Query("UPDATE Notification n SET n.isRead = true WHERE n.user = :user")
     void markAllReadByUser(User user);
+
+    // Scoped to the owner so one user can't mark another user's notifications
+    @Modifying
+    @Query("UPDATE Notification n SET n.isRead = true "
+            + "WHERE n.notificationId = :id AND n.user.userId = :userId")
+    int markReadByIdAndUser(@Param("id") Long id, @Param("userId") Long userId);
 }

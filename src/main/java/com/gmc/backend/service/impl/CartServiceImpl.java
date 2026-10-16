@@ -27,6 +27,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class CartServiceImpl implements CartService {
 
+    private static final int MAX_QUANTITY_PER_ITEM = 999;
+
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
     private final ProductRepository productRepository;
@@ -46,9 +48,12 @@ public class CartServiceImpl implements CartService {
         Product product = productRepository.findById(request.getProductId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Product not found: " + request.getProductId()));
-        if (product.getStockQuantity() < request.getQuantity()) {
-            throw new BusinessRuleException("Insufficient stock for product: " + product.getName());
+        if (Boolean.FALSE.equals(product.getIsActive())) {
+            throw new BusinessRuleException(product.getName() + " is no longer available");
         }
+        // Check what the cart would hold in total, not just this addition
+        int inCart = cartItemRepository.findByCartAndProduct(cart, product).map(CartItem::getQuantity).orElse(0);
+        requireStock(product, inCart + request.getQuantity());
         cartItemRepository.findByCartAndProduct(cart, product).ifPresentOrElse(
                 existing -> {
                     existing.setQuantity(existing.getQuantity() + request.getQuantity());
@@ -77,6 +82,7 @@ public class CartServiceImpl implements CartService {
         if (quantity <= 0) {
             cartItemRepository.delete(item);
         } else {
+            requireStock(item.getProduct(), quantity);
             item.setQuantity(quantity);
             cartItemRepository.save(item);
         }
@@ -133,5 +139,17 @@ public class CartServiceImpl implements CartService {
                 .items(itemResponses)
                 .totalAmount(total)
                 .build();
+    }
+
+    private static void requireStock(Product product, int wanted) {
+        int stock = product.getStockQuantity() == null ? 0 : product.getStockQuantity();
+        if (wanted > MAX_QUANTITY_PER_ITEM) {
+            throw new BusinessRuleException("You can order at most " + MAX_QUANTITY_PER_ITEM + " of one item");
+        }
+        if (wanted > stock) {
+            throw new BusinessRuleException(stock == 0
+                    ? product.getName() + " is out of stock"
+                    : "Only " + stock + " of " + product.getName() + " in stock");
+        }
     }
 }

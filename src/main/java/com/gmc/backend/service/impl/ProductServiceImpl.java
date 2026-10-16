@@ -1,5 +1,7 @@
 package com.gmc.backend.service.impl;
 
+import org.springframework.transaction.annotation.Transactional;
+import com.gmc.backend.repository.CartItemRepository;
 import com.gmc.backend.dto.request.ProductRequest;
 import com.gmc.backend.dto.response.CategoryResponse;
 import com.gmc.backend.dto.response.ProductResponse;
@@ -26,10 +28,11 @@ public class ProductServiceImpl implements ProductService {
     private final ProductRepository productRepository;
     private final ProductCategoryRepository categoryRepository;
     private final FileStorageService fileStorageService;
-
+    private final CartItemRepository cartItemRepository;
     @Override
     public List<ProductResponse> getAllProducts() {
         return productRepository.findAll().stream()
+                .filter(ProductServiceImpl::isActive)
                 .map(this::toResponse)
                 .collect(Collectors.toList());
     }
@@ -44,6 +47,7 @@ public class ProductServiceImpl implements ProductService {
         ProductCategory category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found: " + categoryId));
         return productRepository.findByCategory(category).stream()
+                .filter(ProductServiceImpl::isActive)
                 .map(this::toResponse)
                 .collect(Collectors.toList());
     }
@@ -51,6 +55,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public List<ProductResponse> searchProducts(String name) {
         return productRepository.findByNameContainingIgnoreCase(name).stream()
+                .filter(ProductServiceImpl::isActive)
                 .map(this::toResponse)
                 .collect(Collectors.toList());
     }
@@ -58,7 +63,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public List<ProductResponse> getProductsByMaterial(String material) {
         return productRepository.findAll().stream()
-                .filter(p -> material.equalsIgnoreCase(p.getMaterial()))
+                .filter(p -> isActive(p) && material.equalsIgnoreCase(p.getMaterial()))
                 .map(this::toResponse)
                 .collect(Collectors.toList());
     }
@@ -99,9 +104,36 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional
     public void deleteProduct(Long productId) {
-        findById(productId);
-        productRepository.deleteById(productId);
+        // A hard delete would break past orders, reviews and complaints that reference it
+        Product product = findById(productId);
+        product.setIsActive(false);
+        productRepository.save(product);
+        cartItemRepository.deleteByProduct(product);
+    }
+
+    @Override
+    @Transactional
+    public ProductResponse setActive(Long productId, boolean active) {
+        Product product = findById(productId);
+        product.setIsActive(active);
+        Product saved = productRepository.save(product);
+        if (!active) {
+            cartItemRepository.deleteByProduct(saved);
+        }
+        return toResponse(saved);
+    }
+
+    @Override
+    public List<ProductResponse> getAllProductsIncludingArchived() {
+        return productRepository.findAll().stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    private static boolean isActive(Product product) {
+        return !Boolean.FALSE.equals(product.getIsActive());
     }
 
     @Override
@@ -157,6 +189,7 @@ public class ProductServiceImpl implements ProductService {
                 .imageUrl(product.getImageUrl())
                 .imageUrls(galleryOf(product))
                 .stockQuantity(product.getStockQuantity())
+                .active(isActive(product))
                 .build();
     }
 

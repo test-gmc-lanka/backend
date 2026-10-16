@@ -41,6 +41,10 @@ public class Notification {
     @Column(nullable = false)
     private String type;
 
+    // Page the notification opens when clicked, e.g. "/orders/12" or "/admin/appointments"
+    @Column(length = 255)
+    private String link;
+
     @Builder.Default
     @Column(name = "is_read", nullable = false)
     private Boolean isRead = false;

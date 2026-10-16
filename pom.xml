@@ -34,7 +34,7 @@
 		<dependency>
 			<groupId>com.h2database</groupId>
 			<artifactId>h2</artifactId>
-			<scope>runtime</scope>
+			<scope>test</scope>
 		</dependency>
 		<!--  ── Security ────────────────────────────────────  -->
 		<dependency>
@@ -50,6 +50,12 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-mail</artifactId>
+		</dependency>
+		<!--  ── Stripe (card payments) ──────────────────────  -->
+		<dependency>
+			<groupId>com.stripe</groupId>
+			<artifactId>stripe-java</artifactId>
+			<version>33.4.2</version>
 		</dependency>
 		<!--  ── API Docs (Swagger UI) ───────────────────────  -->
 		<dependency>

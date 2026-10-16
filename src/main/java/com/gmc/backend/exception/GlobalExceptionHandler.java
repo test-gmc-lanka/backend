@@ -1,5 +1,16 @@
 package com.gmc.backend.exception;
 
+import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
+import jakarta.validation.ConstraintViolationException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
+import org.springframework.security.authorization.AuthorizationDeniedException;
+import org.springframework.security.access.AccessDeniedException;
 import com.gmc.backend.dto.response.ApiErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -127,6 +138,70 @@ public class GlobalExceptionHandler {
                         .error("INVALID_CREDENTIALS")
                         .message("Invalid email or password")
                         .build());
+    }
+
+    @ExceptionHandler(TooManyRequestsException.class)
+    public ResponseEntity<ApiErrorResponse> handleTooManyRequests(TooManyRequestsException ex) {
+        return error(HttpStatus.TOO_MANY_REQUESTS, "TOO_MANY_REQUESTS", ex.getMessage());
+    }
+
+    // @PreAuthorize denials (e.g. a customer calling an admin endpoint)
+    @ExceptionHandler({AccessDeniedException.class, AuthorizationDeniedException.class})
+    public ResponseEntity<ApiErrorResponse> handleAccessDenied(Exception ex) {
+        return error(HttpStatus.FORBIDDEN, "FORBIDDEN", "You don't have permission to do this");
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleNoResource(NoResourceFoundException ex) {
+        return error(HttpStatus.NOT_FOUND, "NOT_FOUND", "The requested address does not exist");
+    }
+
+    // Wrong type in the URL, e.g. ?status=FOO or /orders/abc
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        return error(HttpStatus.BAD_REQUEST, "INVALID_PARAMETER",
+                "Invalid value for '" + ex.getName() + "'");
+    }
+
+    // Malformed JSON or an unknown enum value in the request body
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiErrorResponse> handleUnreadable(HttpMessageNotReadableException ex) {
+        return error(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", "The request body is invalid or malformed");
+    }
+
+    @ExceptionHandler({MissingServletRequestParameterException.class, MissingServletRequestPartException.class})
+    public ResponseEntity<ApiErrorResponse> handleMissingParameter(Exception ex) {
+        return error(HttpStatus.BAD_REQUEST, "MISSING_PARAMETER", ex.getMessage());
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ApiErrorResponse> handleConstraintViolation(ConstraintViolationException ex) {
+        String message = ex.getConstraintViolations().stream()
+                .map(v -> v.getMessage())
+                .collect(Collectors.joining(", "));
+        return error(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", message);
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ApiErrorResponse> handleMethodNotAllowed(HttpRequestMethodNotSupportedException ex) {
+        return error(HttpStatus.METHOD_NOT_ALLOWED, "METHOD_NOT_ALLOWED", ex.getMessage());
+    }
+
+    // Unique/foreign-key conflicts, e.g. a double-clicked submit or deleting something still in use
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiErrorResponse> handleDataIntegrity(DataIntegrityViolationException ex) {
+        return error(HttpStatus.CONFLICT, "CONFLICT",
+                "This change conflicts with existing data. Please refresh and try again.");
+    }
+
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    public ResponseEntity<ApiErrorResponse> handleOptimisticLock(OptimisticLockingFailureException ex) {
+        return error(HttpStatus.CONFLICT, "CONFLICT", "Someone else changed this at the same time. Please refresh.");
+    }
+
+    private static ResponseEntity<ApiErrorResponse> error(HttpStatus status, String code, String message) {
+        return ResponseEntity.status(status)
+                .body(ApiErrorResponse.builder().success(false).error(code).message(message).build());
     }
 
     @ExceptionHandler(Exception.class)

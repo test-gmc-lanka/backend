@@ -15,4 +15,7 @@ public class ComplaintResponse {
     private String status;
     private Long userId;
     private String userName;
+    private Long orderId;
+    private Long productId;
+    private String productName;
 }

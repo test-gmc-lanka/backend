@@ -1,5 +1,6 @@
 package com.gmc.backend.service.impl;
 
+import com.gmc.backend.repository.CartItemRepository;
 import com.gmc.backend.dto.request.ProductRequest;
 import com.gmc.backend.dto.response.ProductResponse;
 import com.gmc.backend.exception.ResourceNotFoundException;
@@ -39,6 +40,8 @@ class ProductServiceImplTest {
     private ProductCategoryRepository categoryRepository;
     @Mock
     private FileStorageService fileStorageService;
+    @Mock
+    private CartItemRepository cartItemRepository;
 
     @InjectMocks
     private ProductServiceImpl productService;
@@ -245,12 +248,36 @@ class ProductServiceImplTest {
     }
 
     @Test
-    void deleteProduct_existing_deletes() {
-        when(productRepository.findById(2L)).thenReturn(Optional.of(product(2L, "Steel")));
+    void deleteProduct_archivesInsteadOfDeleting() {
+        Product product = product(2L, "Steel");
+        when(productRepository.findById(2L)).thenReturn(Optional.of(product));
 
         productService.deleteProduct(2L);
 
-        verify(productRepository).deleteById(2L);
+        // Past orders and reviews still reference it, so it's archived, not removed
+        assertThat(product.getIsActive()).isFalse();
+        verify(productRepository, never()).deleteById(any());
+        verify(cartItemRepository).deleteByProduct(product);
+    }
+
+    @Test
+    void getAllProducts_hidesArchivedProducts() {
+        Product archived = product(3L, "Oak");
+        archived.setIsActive(false);
+        when(productRepository.findAll()).thenReturn(List.of(product(2L, "Steel"), archived));
+
+        assertThat(productService.getAllProducts()).extracting(ProductResponse::getProductId).containsExactly(2L);
+        assertThat(productService.getAllProductsIncludingArchived()).hasSize(2);
+    }
+
+    @Test
+    void setActive_restoresArchivedProduct() {
+        Product archived = product(3L, "Oak");
+        archived.setIsActive(false);
+        when(productRepository.findById(3L)).thenReturn(Optional.of(archived));
+        when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        assertThat(productService.setActive(3L, true).isActive()).isTrue();
     }
 
     @Test

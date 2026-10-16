@@ -19,4 +19,6 @@ public class ProductResponse {
     private String imageUrl;
     private List<String> imageUrls;
     private Integer stockQuantity;
+    // False when archived by an admin: hidden from the catalog and can't be bought
+    private boolean active;
 }

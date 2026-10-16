@@ -49,4 +49,13 @@ public class Complaint {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
+
+    // Optional: which order and product the complaint is about
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "order_id")
+    private Order order;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "product_id")
+    private Product product;
 }

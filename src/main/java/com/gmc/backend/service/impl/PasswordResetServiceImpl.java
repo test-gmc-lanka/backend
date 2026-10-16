@@ -1,5 +1,6 @@
 package com.gmc.backend.service.impl;
 
+import java.util.Locale;
 import com.gmc.backend.exception.BusinessRuleException;
 import com.gmc.backend.model.PasswordResetToken;
 import com.gmc.backend.model.User;
@@ -46,7 +47,7 @@ public class PasswordResetServiceImpl implements PasswordResetService {
     @Transactional
     public void requestReset(String email) {
         // Same outcome for unknown/inactive addresses so the endpoint can't reveal who has an account
-        User user = userRepository.findByEmail(email.trim()).orElse(null);
+        User user = userRepository.findByEmail(email.trim().toLowerCase(Locale.ROOT)).orElse(null);
         if (user == null || Boolean.FALSE.equals(user.getActive())) {
             return;
         }

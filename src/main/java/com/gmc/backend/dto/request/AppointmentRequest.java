@@ -3,9 +3,11 @@ package com.gmc.backend.dto.request;
 import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 public class AppointmentRequest {
@@ -15,5 +17,13 @@ public class AppointmentRequest {
     private LocalDateTime date;
 
     @NotBlank(message = "Message is required")
+    @Size(max = 1000, message = "Message must be at most 1000 characters")
     private String message;
+
+    // Optional product line from the "Related product" dropdown
+    private Long categoryId;
+
+    // URLs returned by POST /api/appointments/images
+    @Size(max = 6, message = "You can attach up to 6 images")
+    private List<String> imageUrls;
 }

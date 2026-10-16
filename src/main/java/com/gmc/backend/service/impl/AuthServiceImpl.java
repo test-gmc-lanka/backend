@@ -1,5 +1,10 @@
 package com.gmc.backend.service.impl;
 
+import java.util.Locale;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseCookie;
+import org.springframework.http.HttpHeaders;
 import com.gmc.backend.dto.request.LoginRequest;
 import com.gmc.backend.dto.request.RegisterRequest;
 import com.gmc.backend.dto.response.AuthResponse;
@@ -13,7 +18,6 @@ import com.gmc.backend.security.JwtTokenProvider;
 import com.gmc.backend.service.AuthService;
 import com.gmc.backend.service.RefreshTokenResult;
 import com.gmc.backend.service.RefreshTokenService;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -30,7 +34,10 @@ import java.util.Map;
 public class AuthServiceImpl implements AuthService {
 
     private static final int REFRESH_COOKIE_MAX_AGE = 7 * 24 * 60 * 60;
+    private static final String REFRESH_COOKIE = "refreshToken";
 
+    @Value("${app.cookie.secure:false}")
+    private boolean secureCookies;
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
@@ -39,9 +46,11 @@ public class AuthServiceImpl implements AuthService {
     private final RefreshTokenService refreshTokenService;
 
     @Override
+    @Transactional
     public AuthResponse register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new DuplicateEmailException(request.getEmail());
+        String email = normalizeEmail(request.getEmail());
+        if (userRepository.existsByEmail(email)) {
+            throw new DuplicateEmailException(email);
         }
 
         Role defaultRole = roleRepository.findByRoleName("CUSTOMER")
@@ -49,8 +58,8 @@ public class AuthServiceImpl implements AuthService {
                         Role.builder().roleName("CUSTOMER").build()));
 
         User user = User.builder()
-                .name(request.getName())
-                .email(request.getEmail())
+                .name(request.getName().trim())
+                .email(email)
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(defaultRole)
                 .build();
@@ -62,12 +71,12 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public AuthResponse login(LoginRequest request, HttpServletResponse response) {
+        String email = normalizeEmail(request.getEmail());
         authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.getEmail(), request.getPassword()));
+                new UsernamePasswordAuthenticationToken(email, request.getPassword()));
 
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new UsernameNotFoundException(request.getEmail()));
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException(email));
 
         String rawToken = refreshTokenService.createRefreshToken(user.getUserId());
         addRefreshCookie(response, rawToken);
@@ -106,21 +115,35 @@ public class AuthServiceImpl implements AuthService {
                 .build();
     }
 
+    @Override
+    public void startNewSession(Long userId, HttpServletResponse response) {
+        addRefreshCookie(response, refreshTokenService.createRefreshToken(userId));
+    }
+
+    private static String normalizeEmail(String email) {
+        return email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
+    }
+
+    // HttpOnly (no JS access), SameSite=Strict (not sent cross-site), only sent to /api/auth,
+    // Secure when app.cookie.secure=true (HTTPS in production)
     private void addRefreshCookie(HttpServletResponse response, String rawToken) {
-        Cookie cookie = new Cookie("refreshToken", rawToken);
-        cookie.setHttpOnly(true);
-        cookie.setSecure(false); // set true in production (HTTPS only)
-        cookie.setPath("/");
-        cookie.setMaxAge(REFRESH_COOKIE_MAX_AGE);
-        response.addCookie(cookie);
+        response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie(rawToken, REFRESH_COOKIE_MAX_AGE).toString());
+        // Remove the cookie older versions set on path "/"
+        response.addHeader(HttpHeaders.SET_COOKIE, ResponseCookie.from(REFRESH_COOKIE, "")
+                .path("/").maxAge(0).httpOnly(true).build().toString());
     }
 
     private void clearRefreshCookie(HttpServletResponse response) {
-        Cookie cookie = new Cookie("refreshToken", "");
-        cookie.setHttpOnly(true);
-        cookie.setSecure(false);
-        cookie.setPath("/");
-        cookie.setMaxAge(0);
-        response.addCookie(cookie);
+        response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie("", 0).toString());
+    }
+
+    private ResponseCookie refreshCookie(String value, long maxAgeSeconds) {
+        return ResponseCookie.from(REFRESH_COOKIE, value)
+                .httpOnly(true)
+                .secure(secureCookies)
+                .sameSite("Strict")
+                .path("/api/auth")
+                .maxAge(maxAgeSeconds)
+                .build();
     }
 }

@@ -1,5 +1,8 @@
 package com.gmc.backend.service.impl;
 
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.Mockito.atLeastOnce;
 import com.gmc.backend.dto.request.LoginRequest;
 import com.gmc.backend.dto.request.RegisterRequest;
 import com.gmc.backend.dto.response.AuthResponse;
@@ -138,7 +141,7 @@ class AuthServiceImplTest {
 
         assertEquals("access-token", result.getAccessToken());
         assertEquals("CUSTOMER", result.getRole());
-        verify(httpResponse).addCookie(any());
+        verify(httpResponse, atLeastOnce()).addHeader(eq("Set-Cookie"), contains("refreshToken="));
     }
 
     @Test
@@ -148,6 +151,6 @@ class AuthServiceImplTest {
         authService.logout("raw-refresh-token", httpResponse);
 
         verify(refreshTokenService).invalidateByRawToken("raw-refresh-token");
-        verify(httpResponse).addCookie(any());
+        verify(httpResponse).addHeader(eq("Set-Cookie"), contains("Max-Age=0"));
     }
 }

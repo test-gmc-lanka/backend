@@ -1,5 +1,6 @@
 package com.gmc.backend.model;
 
+import jakarta.persistence.UniqueConstraint;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -22,7 +23,9 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "feedbacks")
+@Table(name = "feedbacks",
+        uniqueConstraints = @UniqueConstraint(name = "uk_feedback_user_order_product",
+                columnNames = {"user_id", "order_id", "product_id"}))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -48,6 +51,15 @@ public class Feedback {
     @NotNull(message = "Created date is required")
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
+
+    // Set when the customer edits their review
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    // Hidden by an admin (abusive, spam, off-topic); hidden reviews are not shown publicly.
+    // Nullable so rows created before moderation existed count as visible.
+    @Column(name = "hidden")
+    private Boolean hidden;
 
     @NotNull(message = "User is required")
     @ManyToOne(fetch = FetchType.LAZY)

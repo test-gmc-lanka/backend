@@ -13,5 +13,6 @@ public interface MaintenanceService {
 
     List<MaintenanceResponse> getAllMaintenance();
 
-    MaintenanceResponse updateMaintenanceStatus(Long maintenanceId, String status);
+    /** Technicians may only update their own tasks; status is ASSIGNED, IN_PROGRESS or COMPLETED. */
+    MaintenanceResponse updateMaintenanceStatus(Long maintenanceId, Long technicianId, String status);
 }

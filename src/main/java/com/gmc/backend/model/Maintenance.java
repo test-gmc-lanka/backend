@@ -22,6 +22,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -60,6 +61,10 @@ public class Maintenance {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id")
     private Product product;
+
+    // Date the work must be finished by
+    @Column(name = "deadline")
+    private LocalDate deadline;
 
     // Name of the custom design when the task is not tied to a product
     @Column

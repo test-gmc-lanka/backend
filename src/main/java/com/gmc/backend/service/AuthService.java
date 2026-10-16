@@ -13,5 +13,8 @@ public interface AuthService {
 
     AuthResponse refresh(String rawRefreshToken, HttpServletResponse response);
 
+    /** Issues a fresh refresh-token cookie, e.g. after other sessions were revoked. */
+    void startNewSession(Long userId, HttpServletResponse response);
+
     void logout(String rawRefreshToken, HttpServletResponse response);
 }
