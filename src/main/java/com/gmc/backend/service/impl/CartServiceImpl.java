@@ -14,14 +14,13 @@ import com.gmc.backend.repository.CartRepository;
 import com.gmc.backend.repository.ProductRepository;
 import com.gmc.backend.repository.UserRepository;
 import com.gmc.backend.service.CartService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -45,28 +44,32 @@ public class CartServiceImpl implements CartService {
     @Transactional
     public CartResponse addItem(Long userId, CartItemRequest request) {
         Cart cart = getOrCreateCart(userId);
-        Product product = productRepository.findById(request.getProductId())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Product not found: " + request.getProductId()));
+        Product product = productRepository
+                .findById(request.getProductId())
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + request.getProductId()));
         if (Boolean.FALSE.equals(product.getIsActive())) {
             throw new BusinessRuleException(product.getName() + " is no longer available");
         }
         // Check what the cart would hold in total, not just this addition
-        int inCart = cartItemRepository.findByCartAndProduct(cart, product).map(CartItem::getQuantity).orElse(0);
+        int inCart = cartItemRepository
+                .findByCartAndProduct(cart, product)
+                .map(CartItem::getQuantity)
+                .orElse(0);
         requireStock(product, inCart + request.getQuantity());
-        cartItemRepository.findByCartAndProduct(cart, product).ifPresentOrElse(
-                existing -> {
-                    existing.setQuantity(existing.getQuantity() + request.getQuantity());
-                    cartItemRepository.save(existing);
-                },
-                () -> {
-                    CartItem item = new CartItem();
-                    item.setCart(cart);
-                    item.setProduct(product);
-                    item.setQuantity(request.getQuantity());
-                    cartItemRepository.save(item);
-                }
-        );
+        cartItemRepository
+                .findByCartAndProduct(cart, product)
+                .ifPresentOrElse(
+                        existing -> {
+                            existing.setQuantity(existing.getQuantity() + request.getQuantity());
+                            cartItemRepository.save(existing);
+                        },
+                        () -> {
+                            CartItem item = new CartItem();
+                            item.setCart(cart);
+                            item.setProduct(product);
+                            item.setQuantity(request.getQuantity());
+                            cartItemRepository.save(item);
+                        });
         return toResponse(cartRepository.findById(cart.getCartId()).orElse(cart));
     }
 
@@ -74,7 +77,8 @@ public class CartServiceImpl implements CartService {
     @Transactional
     public CartResponse updateItemQuantity(Long userId, Long cartItemId, Integer quantity) {
         Cart cart = getOrCreateCart(userId);
-        CartItem item = cartItemRepository.findById(cartItemId)
+        CartItem item = cartItemRepository
+                .findById(cartItemId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cart item not found: " + cartItemId));
         if (!item.getCart().getCartId().equals(cart.getCartId())) {
             throw new BusinessRuleException("Cart item does not belong to this user");
@@ -93,7 +97,8 @@ public class CartServiceImpl implements CartService {
     @Transactional
     public CartResponse removeItem(Long userId, Long cartItemId) {
         Cart cart = getOrCreateCart(userId);
-        CartItem item = cartItemRepository.findById(cartItemId)
+        CartItem item = cartItemRepository
+                .findById(cartItemId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cart item not found: " + cartItemId));
         if (!item.getCart().getCartId().equals(cart.getCartId())) {
             throw new BusinessRuleException("Cart item does not belong to this user");
@@ -111,7 +116,8 @@ public class CartServiceImpl implements CartService {
 
     private Cart getOrCreateCart(Long userId) {
         return cartRepository.findByUser_UserId(userId).orElseGet(() -> {
-            User user = userRepository.findById(userId)
+            User user = userRepository
+                    .findById(userId)
                     .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
             Cart newCart = new Cart();
             newCart.setUser(user);
@@ -127,13 +133,11 @@ public class CartServiceImpl implements CartService {
                         .cartItemId(item.getCartItemId())
                         .product(productServiceImpl.toResponse(item.getProduct()))
                         .quantity(item.getQuantity())
-                        .subtotal(item.getProduct().getPrice()
-                                .multiply(BigDecimal.valueOf(item.getQuantity())))
+                        .subtotal(item.getProduct().getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
                         .build())
                 .collect(Collectors.toList());
-        BigDecimal total = itemResponses.stream()
-                .map(CartItemResponse::getSubtotal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal total =
+                itemResponses.stream().map(CartItemResponse::getSubtotal).reduce(BigDecimal.ZERO, BigDecimal::add);
         return CartResponse.builder()
                 .cartId(cart.getCartId())
                 .items(itemResponses)
@@ -147,9 +151,10 @@ public class CartServiceImpl implements CartService {
             throw new BusinessRuleException("You can order at most " + MAX_QUANTITY_PER_ITEM + " of one item");
         }
         if (wanted > stock) {
-            throw new BusinessRuleException(stock == 0
-                    ? product.getName() + " is out of stock"
-                    : "Only " + stock + " of " + product.getName() + " in stock");
+            throw new BusinessRuleException(
+                    stock == 0
+                            ? product.getName() + " is out of stock"
+                            : "Only " + stock + " of " + product.getName() + " in stock");
         }
     }
 }

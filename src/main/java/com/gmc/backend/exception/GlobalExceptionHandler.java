@@ -1,27 +1,26 @@
 package com.gmc.backend.exception;
 
-import org.springframework.dao.OptimisticLockingFailureException;
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.web.HttpRequestMethodNotSupportedException;
-import jakarta.validation.ConstraintViolationException;
-import org.springframework.web.multipart.support.MissingServletRequestPartException;
-import org.springframework.web.bind.MissingServletRequestParameterException;
-import org.springframework.http.converter.HttpMessageNotReadableException;
-import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
-import org.springframework.web.servlet.resource.NoResourceFoundException;
-import org.springframework.security.authorization.AuthorizationDeniedException;
-import org.springframework.security.access.AccessDeniedException;
 import com.gmc.backend.dto.response.ApiErrorResponse;
+import jakarta.validation.ConstraintViolationException;
+import java.util.stream.Collectors;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authorization.AuthorizationDeniedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
-
-import java.util.stream.Collectors;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -110,8 +109,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(InvalidOrderStatusTransitionException.class)
-    public ResponseEntity<ApiErrorResponse> handleStatusTransition(
-            InvalidOrderStatusTransitionException ex) {
+    public ResponseEntity<ApiErrorResponse> handleStatusTransition(InvalidOrderStatusTransitionException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ApiErrorResponse.builder()
                         .success(false)
@@ -159,8 +157,7 @@ public class GlobalExceptionHandler {
     // Wrong type in the URL, e.g. ?status=FOO or /orders/abc
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ApiErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
-        return error(HttpStatus.BAD_REQUEST, "INVALID_PARAMETER",
-                "Invalid value for '" + ex.getName() + "'");
+        return error(HttpStatus.BAD_REQUEST, "INVALID_PARAMETER", "Invalid value for '" + ex.getName() + "'");
     }
 
     // Malformed JSON or an unknown enum value in the request body
@@ -176,9 +173,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ApiErrorResponse> handleConstraintViolation(ConstraintViolationException ex) {
-        String message = ex.getConstraintViolations().stream()
-                .map(v -> v.getMessage())
-                .collect(Collectors.joining(", "));
+        String message =
+                ex.getConstraintViolations().stream().map(v -> v.getMessage()).collect(Collectors.joining(", "));
         return error(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", message);
     }
 
@@ -190,7 +186,9 @@ public class GlobalExceptionHandler {
     // Unique/foreign-key conflicts, e.g. a double-clicked submit or deleting something still in use
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiErrorResponse> handleDataIntegrity(DataIntegrityViolationException ex) {
-        return error(HttpStatus.CONFLICT, "CONFLICT",
+        return error(
+                HttpStatus.CONFLICT,
+                "CONFLICT",
                 "This change conflicts with existing data. Please refresh and try again.");
     }
 
@@ -201,7 +199,11 @@ public class GlobalExceptionHandler {
 
     private static ResponseEntity<ApiErrorResponse> error(HttpStatus status, String code, String message) {
         return ResponseEntity.status(status)
-                .body(ApiErrorResponse.builder().success(false).error(code).message(message).build());
+                .body(ApiErrorResponse.builder()
+                        .success(false)
+                        .error(code)
+                        .message(message)
+                        .build());
     }
 
     @ExceptionHandler(Exception.class)

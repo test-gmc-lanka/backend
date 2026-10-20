@@ -4,10 +4,8 @@ import com.gmc.backend.dto.request.ChangePasswordRequest;
 import com.gmc.backend.dto.request.CreateUserRequest;
 import com.gmc.backend.dto.request.UpdateProfileRequest;
 import com.gmc.backend.dto.response.UserResponse;
-
-import org.springframework.web.multipart.MultipartFile;
-
 import java.util.List;
+import org.springframework.web.multipart.MultipartFile;
 
 public interface UserService {
 

@@ -1,13 +1,12 @@
 package com.gmc.backend.security;
 
 import com.gmc.backend.exception.TooManyRequestsException;
-import org.springframework.stereotype.Component;
-
 import java.time.Duration;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.stereotype.Component;
 
 /**
  * Simple in-memory sliding-window limiter for abuse-prone endpoints (password guessing,

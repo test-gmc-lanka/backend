@@ -1,5 +1,16 @@
 package com.gmc.backend.service.impl;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import com.gmc.backend.dto.request.AppointmentRequest;
 import com.gmc.backend.dto.request.RescheduleRequest;
 import com.gmc.backend.dto.response.AppointmentResponse;
@@ -15,26 +26,14 @@ import com.gmc.backend.repository.ProductCategoryRepository;
 import com.gmc.backend.repository.UserRepository;
 import com.gmc.backend.service.EmailService;
 import com.gmc.backend.service.NotificationService;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.contains;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class AppointmentServiceImplTest {
@@ -61,8 +60,13 @@ class AppointmentServiceImplTest {
 
     private User user() {
         Role role = Role.builder().roleId(1L).roleName("CUSTOMER").build();
-        return User.builder().userId(1L).name("User").email("user@example.com")
-                .password("pass").role(role).build();
+        return User.builder()
+                .userId(1L)
+                .name("User")
+                .email("user@example.com")
+                .password("pass")
+                .role(role)
+                .build();
     }
 
     private Appointment appointment(User u, AppointmentStatus status) {
@@ -84,8 +88,7 @@ class AppointmentServiceImplTest {
     // Makes repository.save() return the same object it receives, so the
     // status/date set by the service can be checked on the response.
     private void saveReturnsArgument() {
-        when(appointmentRepository.save(any(Appointment.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(appointmentRepository.save(any(Appointment.class))).thenAnswer(invocation -> invocation.getArgument(0));
     }
 
     private void found(Appointment a) {
@@ -119,8 +122,7 @@ class AppointmentServiceImplTest {
         req.setDate(LocalDateTime.now().plusDays(1));
         req.setMessage("Test");
 
-        assertThrows(ResourceNotFoundException.class,
-                () -> appointmentService.bookAppointment(99L, req));
+        assertThrows(ResourceNotFoundException.class, () -> appointmentService.bookAppointment(99L, req));
     }
 
     // ════════════════════════ CUSTOMER: reschedule ═══════════════════════════
@@ -129,16 +131,20 @@ class AppointmentServiceImplTest {
     void reschedule_shouldThrowWhenAppointmentIsCancelled() {
         found(appointment(user(), AppointmentStatus.CANCELLED));
 
-        assertThrows(BusinessRuleException.class, () -> appointmentService.reschedule(
-                1L, 1L, rescheduleRequest(LocalDateTime.now().plusDays(3))));
+        assertThrows(
+                BusinessRuleException.class,
+                () -> appointmentService.reschedule(
+                        1L, 1L, rescheduleRequest(LocalDateTime.now().plusDays(3))));
     }
 
     @Test
     void reschedule_shouldThrowWhenAppointmentIsCompleted() {
         found(appointment(user(), AppointmentStatus.COMPLETED));
 
-        assertThrows(BusinessRuleException.class, () -> appointmentService.reschedule(
-                1L, 1L, rescheduleRequest(LocalDateTime.now().plusDays(3))));
+        assertThrows(
+                BusinessRuleException.class,
+                () -> appointmentService.reschedule(
+                        1L, 1L, rescheduleRequest(LocalDateTime.now().plusDays(3))));
     }
 
     @Test
@@ -147,8 +153,7 @@ class AppointmentServiceImplTest {
         found(appointment(user(), AppointmentStatus.PENDING));
         saveReturnsArgument();
 
-        AppointmentResponse result =
-                appointmentService.reschedule(1L, 1L, rescheduleRequest(newDate));
+        AppointmentResponse result = appointmentService.reschedule(1L, 1L, rescheduleRequest(newDate));
 
         assertEquals(newDate, result.getDate());
         assertEquals(AppointmentStatus.PENDING, result.getStatus());
@@ -168,12 +173,19 @@ class AppointmentServiceImplTest {
 
     @Test
     void reschedule_shouldThrowWhenAccessedByDifferentUser() {
-        User owner = User.builder().userId(2L).name("Other").email("other@test.com")
-                .password("pass").role(Role.builder().roleName("CUSTOMER").build()).build();
+        User owner = User.builder()
+                .userId(2L)
+                .name("Other")
+                .email("other@test.com")
+                .password("pass")
+                .role(Role.builder().roleName("CUSTOMER").build())
+                .build();
         found(appointment(owner, AppointmentStatus.PENDING));
 
-        assertThrows(ResourceNotFoundException.class, () -> appointmentService.reschedule(
-                1L, 1L, rescheduleRequest(LocalDateTime.now().plusDays(3))));
+        assertThrows(
+                ResourceNotFoundException.class,
+                () -> appointmentService.reschedule(
+                        1L, 1L, rescheduleRequest(LocalDateTime.now().plusDays(3))));
         verify(appointmentRepository, never()).save(any());
     }
 
@@ -183,16 +195,14 @@ class AppointmentServiceImplTest {
     void cancelAppointment_shouldThrowWhenAlreadyCompleted() {
         found(appointment(user(), AppointmentStatus.COMPLETED));
 
-        assertThrows(BusinessRuleException.class,
-                () -> appointmentService.cancelAppointment(1L, 1L));
+        assertThrows(BusinessRuleException.class, () -> appointmentService.cancelAppointment(1L, 1L));
     }
 
     @Test
     void cancelAppointment_shouldThrowWhenAlreadyCancelled() {
         found(appointment(user(), AppointmentStatus.CANCELLED));
 
-        assertThrows(BusinessRuleException.class,
-                () -> appointmentService.cancelAppointment(1L, 1L));
+        assertThrows(BusinessRuleException.class, () -> appointmentService.cancelAppointment(1L, 1L));
     }
 
     @Test
@@ -221,12 +231,16 @@ class AppointmentServiceImplTest {
 
     @Test
     void cancelAppointment_shouldThrowWhenAccessedByDifferentUser() {
-        User owner = User.builder().userId(2L).name("Other").email("other@test.com")
-                .password("pass").role(Role.builder().roleName("CUSTOMER").build()).build();
+        User owner = User.builder()
+                .userId(2L)
+                .name("Other")
+                .email("other@test.com")
+                .password("pass")
+                .role(Role.builder().roleName("CUSTOMER").build())
+                .build();
         found(appointment(owner, AppointmentStatus.PENDING));
 
-        assertThrows(ResourceNotFoundException.class,
-                () -> appointmentService.cancelAppointment(1L, 1L));
+        assertThrows(ResourceNotFoundException.class, () -> appointmentService.cancelAppointment(1L, 1L));
     }
 
     // ════════════════════════ CUSTOMER / ADMIN: queries ══════════════════════
@@ -234,8 +248,7 @@ class AppointmentServiceImplTest {
     @Test
     void getAppointmentsByUser_shouldReturnUserAppointments() {
         User u = user();
-        when(appointmentRepository.findByUserUserId(1L))
-                .thenReturn(List.of(appointment(u, AppointmentStatus.PENDING)));
+        when(appointmentRepository.findByUserUserId(1L)).thenReturn(List.of(appointment(u, AppointmentStatus.PENDING)));
 
         List<AppointmentResponse> result = appointmentService.getAppointmentsByUser(1L);
 
@@ -246,9 +259,9 @@ class AppointmentServiceImplTest {
     @Test
     void getAllAppointments_shouldReturnEveryAppointment() {
         User u = user();
-        when(appointmentRepository.findAll()).thenReturn(List.of(
-                appointment(u, AppointmentStatus.PENDING),
-                appointment(u, AppointmentStatus.APPROVED)));
+        when(appointmentRepository.findAll())
+                .thenReturn(
+                        List.of(appointment(u, AppointmentStatus.PENDING), appointment(u, AppointmentStatus.APPROVED)));
 
         List<AppointmentResponse> result = appointmentService.getAllAppointments();
 
@@ -261,8 +274,7 @@ class AppointmentServiceImplTest {
         when(appointmentRepository.findByStatus(AppointmentStatus.APPROVED))
                 .thenReturn(List.of(appointment(u, AppointmentStatus.APPROVED)));
 
-        List<AppointmentResponse> result =
-                appointmentService.getAppointmentsByStatus(AppointmentStatus.APPROVED);
+        List<AppointmentResponse> result = appointmentService.getAppointmentsByStatus(AppointmentStatus.APPROVED);
 
         assertEquals(1, result.size());
         assertEquals(AppointmentStatus.APPROVED, result.get(0).getStatus());
@@ -295,8 +307,7 @@ class AppointmentServiceImplTest {
     void approveAppointment_shouldThrowWhenCancelled() {
         found(appointment(user(), AppointmentStatus.CANCELLED));
 
-        assertThrows(BusinessRuleException.class,
-                () -> appointmentService.approveAppointment(1L, null, null));
+        assertThrows(BusinessRuleException.class, () -> appointmentService.approveAppointment(1L, null, null));
         verify(appointmentRepository, never()).save(any());
     }
 
@@ -304,16 +315,14 @@ class AppointmentServiceImplTest {
     void approveAppointment_shouldThrowWhenAlreadyApproved() {
         found(appointment(user(), AppointmentStatus.APPROVED));
 
-        assertThrows(BusinessRuleException.class,
-                () -> appointmentService.approveAppointment(1L, null, null));
+        assertThrows(BusinessRuleException.class, () -> appointmentService.approveAppointment(1L, null, null));
     }
 
     @Test
     void approveAppointment_shouldThrowWhenNotFound() {
         when(appointmentRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class,
-                () -> appointmentService.approveAppointment(99L, null, null));
+        assertThrows(ResourceNotFoundException.class, () -> appointmentService.approveAppointment(99L, null, null));
     }
 
     // ════════════════════════ ADMIN: reschedule ══════════════════════════════
@@ -324,8 +333,7 @@ class AppointmentServiceImplTest {
         found(appointment(user(), AppointmentStatus.PENDING));
         saveReturnsArgument();
 
-        AppointmentResponse result =
-                appointmentService.adminReschedule(1L, rescheduleRequest(newDate));
+        AppointmentResponse result = appointmentService.adminReschedule(1L, rescheduleRequest(newDate));
 
         assertEquals(newDate, result.getDate());
         assertEquals(AppointmentStatus.RESCHEDULED, result.getStatus());
@@ -334,8 +342,13 @@ class AppointmentServiceImplTest {
 
     @Test
     void adminReschedule_shouldWorkOnAnotherUsersAppointment() {
-        User owner = User.builder().userId(2L).name("Other").email("other@test.com")
-                .password("pass").role(Role.builder().roleName("CUSTOMER").build()).build();
+        User owner = User.builder()
+                .userId(2L)
+                .name("Other")
+                .email("other@test.com")
+                .password("pass")
+                .role(Role.builder().roleName("CUSTOMER").build())
+                .build();
         found(appointment(owner, AppointmentStatus.APPROVED));
         saveReturnsArgument();
 
@@ -350,8 +363,10 @@ class AppointmentServiceImplTest {
     void adminReschedule_shouldThrowWhenCancelled() {
         found(appointment(user(), AppointmentStatus.CANCELLED));
 
-        assertThrows(BusinessRuleException.class, () -> appointmentService.adminReschedule(
-                1L, rescheduleRequest(LocalDateTime.now().plusDays(2))));
+        assertThrows(
+                BusinessRuleException.class,
+                () -> appointmentService.adminReschedule(
+                        1L, rescheduleRequest(LocalDateTime.now().plusDays(2))));
         verify(appointmentRepository, never()).save(any());
     }
 
@@ -359,8 +374,10 @@ class AppointmentServiceImplTest {
     void adminReschedule_shouldThrowWhenNotFound() {
         when(appointmentRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class, () -> appointmentService.adminReschedule(
-                99L, rescheduleRequest(LocalDateTime.now().plusDays(2))));
+        assertThrows(
+                ResourceNotFoundException.class,
+                () -> appointmentService.adminReschedule(
+                        99L, rescheduleRequest(LocalDateTime.now().plusDays(2))));
     }
 
     // ════════════════════════ ADMIN: cancel ══════════════════════════════════
@@ -397,8 +414,7 @@ class AppointmentServiceImplTest {
         found(appointment(user(), AppointmentStatus.PENDING));
         saveReturnsArgument();
 
-        AppointmentResponse result =
-                appointmentService.updateStatus(1L, AppointmentStatus.APPROVED, null, null);
+        AppointmentResponse result = appointmentService.updateStatus(1L, AppointmentStatus.APPROVED, null, null);
 
         assertEquals(AppointmentStatus.APPROVED, result.getStatus());
     }
@@ -408,8 +424,7 @@ class AppointmentServiceImplTest {
         found(appointment(user(), AppointmentStatus.PENDING));
         saveReturnsArgument();
 
-        AppointmentResponse result =
-                appointmentService.updateStatus(1L, AppointmentStatus.CANCELLED, null, null);
+        AppointmentResponse result = appointmentService.updateStatus(1L, AppointmentStatus.CANCELLED, null, null);
 
         assertEquals(AppointmentStatus.CANCELLED, result.getStatus());
     }
@@ -421,8 +436,7 @@ class AppointmentServiceImplTest {
         found(past);
         saveReturnsArgument();
 
-        AppointmentResponse result =
-                appointmentService.updateStatus(1L, AppointmentStatus.COMPLETED, null, null);
+        AppointmentResponse result = appointmentService.updateStatus(1L, AppointmentStatus.COMPLETED, null, null);
 
         assertEquals(AppointmentStatus.COMPLETED, result.getStatus());
         verify(notificationService).sendNotification(eq(1L), any(), eq("APPOINTMENT"), any());
@@ -432,20 +446,23 @@ class AppointmentServiceImplTest {
     void updateStatus_completedShouldThrowWhenNotApproved() {
         found(appointment(user(), AppointmentStatus.PENDING));
 
-        assertThrows(BusinessRuleException.class,
+        assertThrows(
+                BusinessRuleException.class,
                 () -> appointmentService.updateStatus(1L, AppointmentStatus.COMPLETED, null, null));
         verify(appointmentRepository, never()).save(any());
     }
 
     @Test
     void updateStatus_rescheduledShouldBeRejected() {
-        assertThrows(BusinessRuleException.class,
+        assertThrows(
+                BusinessRuleException.class,
                 () -> appointmentService.updateStatus(1L, AppointmentStatus.RESCHEDULED, null, null));
     }
 
     @Test
     void updateStatus_pendingShouldBeRejected() {
-        assertThrows(BusinessRuleException.class,
+        assertThrows(
+                BusinessRuleException.class,
                 () -> appointmentService.updateStatus(1L, AppointmentStatus.PENDING, null, null));
     }
 
@@ -461,10 +478,10 @@ class AppointmentServiceImplTest {
 
         assertEquals("https://meet.google.com/abc-defg-hij", result.getMeetingLink());
         assertEquals("Please join 5 minutes early", result.getAdminNote());
-        verify(notificationService).sendNotification(
-                eq(1L), contains("https://meet.google.com/abc-defg-hij"), eq("APPOINTMENT"), any());
-        verify(emailService).send(eq("user@example.com"), contains("approved"),
-                contains("Please join 5 minutes early"));
+        verify(notificationService)
+                .sendNotification(eq(1L), contains("https://meet.google.com/abc-defg-hij"), eq("APPOINTMENT"), any());
+        verify(emailService)
+                .send(eq("user@example.com"), contains("approved"), contains("Please join 5 minutes early"));
     }
 
     @Test
@@ -482,7 +499,8 @@ class AppointmentServiceImplTest {
     void approveAppointment_shouldRejectNonHttpLink() {
         found(appointment(user(), AppointmentStatus.PENDING));
 
-        assertThrows(BusinessRuleException.class,
+        assertThrows(
+                BusinessRuleException.class,
                 () -> appointmentService.approveAppointment(1L, "javascript:alert(1)", null));
         verify(appointmentRepository, never()).save(any());
     }
@@ -491,8 +509,8 @@ class AppointmentServiceImplTest {
     void approveAppointment_shouldRejectMalformedLink() {
         found(appointment(user(), AppointmentStatus.PENDING));
 
-        assertThrows(BusinessRuleException.class,
-                () -> appointmentService.approveAppointment(1L, "meet google com", null));
+        assertThrows(
+                BusinessRuleException.class, () -> appointmentService.approveAppointment(1L, "meet google com", null));
     }
 
     @Test
@@ -503,8 +521,8 @@ class AppointmentServiceImplTest {
         AppointmentResponse result = appointmentService.adminCancel(1L, "Technician unavailable");
 
         assertEquals("Technician unavailable", result.getAdminNote());
-        verify(notificationService).sendNotification(
-                eq(1L), contains("Technician unavailable"), eq("APPOINTMENT"), any());
+        verify(notificationService)
+                .sendNotification(eq(1L), contains("Technician unavailable"), eq("APPOINTMENT"), any());
     }
 
     @Test
@@ -526,8 +544,8 @@ class AppointmentServiceImplTest {
         found(past);
         saveReturnsArgument();
 
-        AppointmentResponse result = appointmentService.updateStatus(
-                1L, AppointmentStatus.COMPLETED, null, "Thanks for visiting");
+        AppointmentResponse result =
+                appointmentService.updateStatus(1L, AppointmentStatus.COMPLETED, null, "Thanks for visiting");
 
         assertEquals("Thanks for visiting", result.getAdminNote());
     }
@@ -544,8 +562,12 @@ class AppointmentServiceImplTest {
 
         appointmentService.bookAppointment(1L, request);
 
-        verify(notificationService).notifyAdmins(contains("Need a custom wardrobe"), eq("APPOINTMENT"),
-                eq("/admin/appointments"), eq("New appointment request"));
+        verify(notificationService)
+                .notifyAdmins(
+                        contains("Need a custom wardrobe"),
+                        eq("APPOINTMENT"),
+                        eq("/admin/appointments"),
+                        eq("New appointment request"));
     }
 
     @Test
@@ -555,8 +577,12 @@ class AppointmentServiceImplTest {
 
         appointmentService.cancelAppointment(1L, 1L);
 
-        verify(notificationService).notifyAdmins(contains("cancelled their appointment"), eq("APPOINTMENT"),
-                eq("/admin/appointments"), isNull());
+        verify(notificationService)
+                .notifyAdmins(
+                        contains("cancelled their appointment"),
+                        eq("APPOINTMENT"),
+                        eq("/admin/appointments"),
+                        isNull());
     }
 
     // ════════════════════════ customer images ═════════════════════════════════
@@ -573,8 +599,12 @@ class AppointmentServiceImplTest {
         AppointmentResponse result = appointmentService.bookAppointment(1L, request);
 
         assertEquals(2, result.getImageUrls().size());
-        verify(notificationService).notifyAdmins(contains("2 images attached"), eq("APPOINTMENT"),
-                eq("/admin/appointments"), eq("New appointment request"));
+        verify(notificationService)
+                .notifyAdmins(
+                        contains("2 images attached"),
+                        eq("APPOINTMENT"),
+                        eq("/admin/appointments"),
+                        eq("New appointment request"));
     }
 
     @Test
@@ -595,7 +625,10 @@ class AppointmentServiceImplTest {
     void bookAppointment_shouldSaveProductLineAndMentionItToAdmins() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user()));
         when(categoryRepository.findById(3L))
-                .thenReturn(Optional.of(ProductCategory.builder().categoryId(3L).name("Furniture").build()));
+                .thenReturn(Optional.of(ProductCategory.builder()
+                        .categoryId(3L)
+                        .name("Furniture")
+                        .build()));
         saveReturnsArgument();
         AppointmentRequest request = new AppointmentRequest();
         request.setDate(LocalDateTime.now().plusDays(2));
@@ -606,8 +639,12 @@ class AppointmentServiceImplTest {
 
         assertEquals(3L, result.getCategoryId());
         assertEquals("Furniture", result.getCategoryName());
-        verify(notificationService).notifyAdmins(contains("about Furniture"), eq("APPOINTMENT"),
-                eq("/admin/appointments"), eq("New appointment request"));
+        verify(notificationService)
+                .notifyAdmins(
+                        contains("about Furniture"),
+                        eq("APPOINTMENT"),
+                        eq("/admin/appointments"),
+                        eq("New appointment request"));
     }
 
     @Test
@@ -627,7 +664,8 @@ class AppointmentServiceImplTest {
     void completing_futureAppointment_isRejected() {
         found(appointment(user(), AppointmentStatus.APPROVED));
 
-        assertThrows(BusinessRuleException.class,
+        assertThrows(
+                BusinessRuleException.class,
                 () -> appointmentService.updateStatus(1L, AppointmentStatus.COMPLETED, null, null));
     }
 

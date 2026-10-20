@@ -32,8 +32,7 @@ public class CartController {
 
     @PostMapping("/items")
     public ResponseEntity<CartResponse> addItem(
-            @AuthenticationPrincipal CustomUserDetails user,
-            @Valid @RequestBody CartItemRequest request) {
+            @AuthenticationPrincipal CustomUserDetails user, @Valid @RequestBody CartItemRequest request) {
         return ResponseEntity.ok(cartService.addItem(user.getId(), request));
     }
 
@@ -47,8 +46,7 @@ public class CartController {
 
     @DeleteMapping("/items/{cartItemId}")
     public ResponseEntity<CartResponse> removeItem(
-            @AuthenticationPrincipal CustomUserDetails user,
-            @PathVariable Long cartItemId) {
+            @AuthenticationPrincipal CustomUserDetails user, @PathVariable Long cartItemId) {
         return ResponseEntity.ok(cartService.removeItem(user.getId(), cartItemId));
     }
 

@@ -8,13 +8,12 @@ import com.gmc.backend.repository.NotificationRepository;
 import com.gmc.backend.repository.UserRepository;
 import com.gmc.backend.service.EmailService;
 import com.gmc.backend.service.NotificationService;
+import java.util.List;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -39,7 +38,8 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     public long countUnread(Long userId) {
-        User user = userRepository.findById(userId)
+        User user = userRepository
+                .findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
         return notificationRepository.countByUserAndIsReadFalse(user);
     }
@@ -47,7 +47,8 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     @Transactional
     public void markAllRead(Long userId) {
-        User user = userRepository.findById(userId)
+        User user = userRepository
+                .findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
         notificationRepository.markAllReadByUser(user);
     }
@@ -79,7 +80,9 @@ public class NotificationServiceImpl implements NotificationService {
             }
             save(admin, message, type, link);
             if (emailSubject != null) {
-                emailService.send(admin.getEmail(), "GMC Lanka Admin – " + emailSubject,
+                emailService.send(
+                        admin.getEmail(),
+                        "GMC Lanka Admin – " + emailSubject,
                         "Hi " + admin.getName() + ",\n\n" + message + "\n\n"
                                 + (link == null ? "" : "Open: " + frontendUrl.replaceAll("/+$", "") + link + "\n\n")
                                 + "— GMC Lanka system");

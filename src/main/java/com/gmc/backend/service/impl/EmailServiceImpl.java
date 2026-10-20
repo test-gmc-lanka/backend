@@ -36,8 +36,11 @@ public class EmailServiceImpl implements EmailService {
         }
         JavaMailSender mailSender = mailSenderProvider.getIfAvailable();
         if (mailSender == null) {
-            log.warn("Email is not configured (spring.mail.host is not set). Not sent:\n"
-                    + "To: {}\nSubject: {}\n{}", to, subject, body);
+            log.warn(
+                    "Email is not configured (spring.mail.host is not set). Not sent:\n" + "To: {}\nSubject: {}\n{}",
+                    to,
+                    subject,
+                    body);
             return;
         }
         try {

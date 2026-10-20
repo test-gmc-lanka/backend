@@ -1,5 +1,19 @@
 package com.gmc.backend.service.impl;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import com.gmc.backend.dto.request.FeedbackRequest;
 import com.gmc.backend.dto.request.FeedbackUpdateRequest;
 import com.gmc.backend.dto.response.FeedbackResponse;
@@ -20,43 +34,32 @@ import com.gmc.backend.repository.OrderRepository;
 import com.gmc.backend.repository.ProductRepository;
 import com.gmc.backend.repository.UserRepository;
 import com.gmc.backend.service.NotificationService;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.contains;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 @ExtendWith(MockitoExtension.class)
 class FeedbackServiceImplTest {
 
     @Mock
     private FeedbackRepository feedbackRepository;
+
     @Mock
     private UserRepository userRepository;
+
     @Mock
     private OrderRepository orderRepository;
+
     @Mock
     private ProductRepository productRepository;
+
     @Mock
     private NotificationService notificationService;
 
@@ -65,21 +68,44 @@ class FeedbackServiceImplTest {
 
     private User user(Long id) {
         Role role = Role.builder().roleId(1L).roleName("CUSTOMER").build();
-        return User.builder().userId(id).name("Kamal Perera").email("user" + id + "@test.com")
-                .password("pass").role(role).build();
+        return User.builder()
+                .userId(id)
+                .name("Kamal Perera")
+                .email("user" + id + "@test.com")
+                .password("pass")
+                .role(role)
+                .build();
     }
 
     private Product chair() {
-        return Product.builder().productId(10L).name("Teak Chair").price(BigDecimal.TEN)
-                .category(ProductCategory.builder().categoryId(1L).name("Furniture").build()).build();
+        return Product.builder()
+                .productId(10L)
+                .name("Teak Chair")
+                .price(BigDecimal.TEN)
+                .category(ProductCategory.builder()
+                        .categoryId(1L)
+                        .name("Furniture")
+                        .build())
+                .build();
     }
 
     // Delivered order containing the chair
     private Order order(User owner, OrderStatus status) {
-        Order order = Order.builder().orderId(1L).user(owner).orderDate(LocalDateTime.now())
-                .status(status).orderType(OrderType.B2C).items(new ArrayList<>()).build();
-        order.getItems().add(OrderItem.builder().order(order).product(chair()).quantity(1)
-                .unitPrice(BigDecimal.TEN).build());
+        Order order = Order.builder()
+                .orderId(1L)
+                .user(owner)
+                .orderDate(LocalDateTime.now())
+                .status(status)
+                .orderType(OrderType.B2C)
+                .items(new ArrayList<>())
+                .build();
+        order.getItems()
+                .add(OrderItem.builder()
+                        .order(order)
+                        .product(chair())
+                        .quantity(1)
+                        .unitPrice(BigDecimal.TEN)
+                        .build());
         return order;
     }
 
@@ -98,7 +124,8 @@ class FeedbackServiceImplTest {
         Order order = order(u, OrderStatus.DELIVERED);
         when(userRepository.findById(1L)).thenReturn(Optional.of(u));
         when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
-        when(feedbackRepository.existsByUserAndOrderAndProduct(eq(u), eq(order), any(Product.class))).thenReturn(false);
+        when(feedbackRepository.existsByUserAndOrderAndProduct(eq(u), eq(order), any(Product.class)))
+                .thenReturn(false);
         when(feedbackRepository.save(any(Feedback.class))).thenAnswer(inv -> inv.getArgument(0));
 
         FeedbackResponse result = feedbackService.submitFeedback(1L, request(5));
@@ -120,8 +147,8 @@ class FeedbackServiceImplTest {
 
         feedbackService.submitFeedback(1L, request(2));
 
-        verify(notificationService).notifyAdmins(contains("Teak Chair 2★"), eq("REVIEW"),
-                eq("/admin/feedback"), isNull());
+        verify(notificationService)
+                .notifyAdmins(contains("Teak Chair 2★"), eq("REVIEW"), eq("/admin/feedback"), isNull());
     }
 
     @Test
@@ -159,7 +186,8 @@ class FeedbackServiceImplTest {
         Order order = order(u, OrderStatus.DELIVERED);
         when(userRepository.findById(1L)).thenReturn(Optional.of(u));
         when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
-        when(feedbackRepository.existsByUserAndOrderAndProduct(eq(u), eq(order), any(Product.class))).thenReturn(true);
+        when(feedbackRepository.existsByUserAndOrderAndProduct(eq(u), eq(order), any(Product.class)))
+                .thenReturn(true);
 
         assertThrows(BusinessRuleException.class, () -> feedbackService.submitFeedback(1L, request(5)));
         verify(feedbackRepository, never()).save(any());
@@ -184,10 +212,24 @@ class FeedbackServiceImplTest {
     void getProductReviews_shouldAverageAndShortenNames() {
         User u = user(1L);
         Order order = order(u, OrderStatus.DELIVERED);
-        Feedback five = Feedback.builder().feedbackId(1L).rating(5).comment("Great").user(u).order(order)
-                .product(chair()).createdAt(LocalDateTime.now()).build();
-        Feedback four = Feedback.builder().feedbackId(2L).rating(4).comment("Good").user(u).order(order)
-                .product(chair()).createdAt(LocalDateTime.now()).build();
+        Feedback five = Feedback.builder()
+                .feedbackId(1L)
+                .rating(5)
+                .comment("Great")
+                .user(u)
+                .order(order)
+                .product(chair())
+                .createdAt(LocalDateTime.now())
+                .build();
+        Feedback four = Feedback.builder()
+                .feedbackId(2L)
+                .rating(4)
+                .comment("Good")
+                .user(u)
+                .order(order)
+                .product(chair())
+                .createdAt(LocalDateTime.now())
+                .build();
         when(productRepository.existsById(10L)).thenReturn(true);
         when(feedbackRepository.findVisibleByProduct(10L)).thenReturn(List.of(five, four));
 
@@ -220,8 +262,14 @@ class FeedbackServiceImplTest {
     @Test
     void getFeedbackByUser_shouldReturnUserFeedbackList() {
         User u = user(1L);
-        Feedback f = Feedback.builder().feedbackId(1L).rating(5).comment("ok").user(u)
-                .order(order(u, OrderStatus.DELIVERED)).createdAt(LocalDateTime.now()).build();
+        Feedback f = Feedback.builder()
+                .feedbackId(1L)
+                .rating(5)
+                .comment("ok")
+                .user(u)
+                .order(order(u, OrderStatus.DELIVERED))
+                .createdAt(LocalDateTime.now())
+                .build();
         when(feedbackRepository.findByUser_UserId(1L)).thenReturn(List.of(f));
 
         assertEquals(1, feedbackService.getFeedbackByUser(1L).size());
@@ -230,8 +278,15 @@ class FeedbackServiceImplTest {
     // ════════════════════════ editing & moderation ═══════════════════════════
 
     private Feedback existingReview(User owner, int rating) {
-        return Feedback.builder().feedbackId(7L).rating(rating).comment("Good").user(owner)
-                .order(order(owner, OrderStatus.DELIVERED)).product(chair()).createdAt(LocalDateTime.now()).build();
+        return Feedback.builder()
+                .feedbackId(7L)
+                .rating(rating)
+                .comment("Good")
+                .user(owner)
+                .order(order(owner, OrderStatus.DELIVERED))
+                .product(chair())
+                .createdAt(LocalDateTime.now())
+                .build();
     }
 
     private FeedbackUpdateRequest update(int rating, String comment) {
@@ -263,16 +318,19 @@ class FeedbackServiceImplTest {
 
         feedbackService.updateFeedback(1L, 7L, update(1, "Broke after two weeks"));
 
-        verify(notificationService).notifyAdmins(contains("changed their review to Teak Chair 1★"), eq("REVIEW"),
-                eq("/admin/feedback"), isNull());
+        verify(notificationService)
+                .notifyAdmins(
+                        contains("changed their review to Teak Chair 1★"),
+                        eq("REVIEW"),
+                        eq("/admin/feedback"),
+                        isNull());
     }
 
     @Test
     void updateFeedback_otherUserIsRejected() {
         when(feedbackRepository.findById(7L)).thenReturn(Optional.of(existingReview(user(2L), 4)));
 
-        assertThrows(BusinessRuleException.class,
-                () -> feedbackService.updateFeedback(1L, 7L, update(1, "Not mine")));
+        assertThrows(BusinessRuleException.class, () -> feedbackService.updateFeedback(1L, 7L, update(1, "Not mine")));
         verify(feedbackRepository, never()).save(any());
     }
 

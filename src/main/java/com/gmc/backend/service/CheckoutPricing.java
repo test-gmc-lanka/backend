@@ -1,10 +1,9 @@
 package com.gmc.backend.service;
 
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
-
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
 /**
  * The single place where order totals are calculated. The checkout page displays these
@@ -29,11 +28,9 @@ public class CheckoutPricing {
     public PriceBreakdown calculate(BigDecimal subtotal) {
         BigDecimal items = subtotal.setScale(2, RoundingMode.HALF_UP);
         // A threshold of 0 means shipping is always charged
-        boolean freeShipping = freeShippingThreshold.signum() > 0
-                && items.compareTo(freeShippingThreshold) >= 0;
-        BigDecimal shipping = freeShipping
-                ? BigDecimal.ZERO.setScale(2)
-                : shippingFee.setScale(2, RoundingMode.HALF_UP);
+        boolean freeShipping = freeShippingThreshold.signum() > 0 && items.compareTo(freeShippingThreshold) >= 0;
+        BigDecimal shipping =
+                freeShipping ? BigDecimal.ZERO.setScale(2) : shippingFee.setScale(2, RoundingMode.HALF_UP);
         BigDecimal tax = items.multiply(taxRate).setScale(2, RoundingMode.HALF_UP);
         return new PriceBreakdown(items, shipping, tax, items.add(shipping).add(tax));
     }
@@ -42,7 +39,5 @@ public class CheckoutPricing {
         return taxRate.movePointRight(2).stripTrailingZeros();
     }
 
-    public record PriceBreakdown(BigDecimal subtotal, BigDecimal shippingFee,
-                                 BigDecimal taxAmount, BigDecimal total) {
-    }
+    public record PriceBreakdown(BigDecimal subtotal, BigDecimal shippingFee, BigDecimal taxAmount, BigDecimal total) {}
 }

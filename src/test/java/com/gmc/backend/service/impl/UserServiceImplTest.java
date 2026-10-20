@@ -1,7 +1,14 @@
 package com.gmc.backend.service.impl;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
-import com.gmc.backend.repository.RefreshTokenRepository;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import com.gmc.backend.dto.request.ChangePasswordRequest;
 import com.gmc.backend.dto.request.CreateUserRequest;
 import com.gmc.backend.dto.request.UpdateProfileRequest;
@@ -12,9 +19,12 @@ import com.gmc.backend.exception.InvalidFileException;
 import com.gmc.backend.exception.ResourceNotFoundException;
 import com.gmc.backend.model.Role;
 import com.gmc.backend.model.User;
+import com.gmc.backend.repository.RefreshTokenRepository;
 import com.gmc.backend.repository.RoleRepository;
 import com.gmc.backend.repository.UserRepository;
 import com.gmc.backend.service.FileStorageService;
+import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -22,17 +32,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.crypto.password.PasswordEncoder;
-
-import java.util.List;
-import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceImplTest {
@@ -60,8 +59,15 @@ class UserServiceImplTest {
     }
 
     private User user() {
-        return User.builder().userId(1L).name("Alice").email("alice@example.com")
-                .password("encoded-pass").phone("0771234567").role(role()).active(true).build();
+        return User.builder()
+                .userId(1L)
+                .name("Alice")
+                .email("alice@example.com")
+                .password("encoded-pass")
+                .phone("0771234567")
+                .role(role())
+                .active(true)
+                .build();
     }
 
     @Test
@@ -78,8 +84,7 @@ class UserServiceImplTest {
     void updateProfileImage_shouldStoreInAvatarsFolderAndSaveUrl() {
         MockMultipartFile file = new MockMultipartFile("file", "me.png", "image/png", new byte[] {1});
         when(userRepository.findById(1L)).thenReturn(Optional.of(user()));
-        when(fileStorageService.storeImages(List.of(file), "avatars"))
-                .thenReturn(List.of("/uploads/avatars/me.png"));
+        when(fileStorageService.storeImages(List.of(file), "avatars")).thenReturn(List.of("/uploads/avatars/me.png"));
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
         UserResponse result = userService.updateProfileImage(1L, file);
@@ -175,8 +180,14 @@ class UserServiceImplTest {
     @Test
     void getUsersByRole_shouldReturnOnlyMatchingRole() {
         Role adminRole = Role.builder().roleId(2L).roleName("ADMIN").build();
-        User admin = User.builder().userId(2L).name("Admin").email("admin@test.com")
-                .password("pass").role(adminRole).active(true).build();
+        User admin = User.builder()
+                .userId(2L)
+                .name("Admin")
+                .email("admin@test.com")
+                .password("pass")
+                .role(adminRole)
+                .active(true)
+                .build();
         when(userRepository.findAll()).thenReturn(List.of(user(), admin));
 
         List<UserResponse> result = userService.getUsersByRole("CUSTOMER");
@@ -245,8 +256,13 @@ class UserServiceImplTest {
 
     @Test
     void deactivateUser_shouldRefuseTheLastActiveAdmin() {
-        User admin = User.builder().userId(5L).name("Admin").email("admin@x.com")
-                .role(Role.builder().roleId(2L).roleName("ADMIN").build()).active(true).build();
+        User admin = User.builder()
+                .userId(5L)
+                .name("Admin")
+                .email("admin@x.com")
+                .role(Role.builder().roleId(2L).roleName("ADMIN").build())
+                .active(true)
+                .build();
         when(userRepository.findById(5L)).thenReturn(Optional.of(admin));
         when(userRepository.findByRole_RoleName("ADMIN")).thenReturn(List.of(admin));
 

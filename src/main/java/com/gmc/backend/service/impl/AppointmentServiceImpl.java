@@ -1,5 +1,11 @@
 package com.gmc.backend.service.impl;
 
+import static com.gmc.backend.model.AppointmentStatus.APPROVED;
+import static com.gmc.backend.model.AppointmentStatus.CANCELLED;
+import static com.gmc.backend.model.AppointmentStatus.COMPLETED;
+import static com.gmc.backend.model.AppointmentStatus.PENDING;
+import static com.gmc.backend.model.AppointmentStatus.RESCHEDULED;
+
 import com.gmc.backend.dto.request.AppointmentRequest;
 import com.gmc.backend.dto.request.RescheduleRequest;
 import com.gmc.backend.dto.response.AppointmentResponse;
@@ -15,10 +21,6 @@ import com.gmc.backend.repository.UserRepository;
 import com.gmc.backend.service.AppointmentService;
 import com.gmc.backend.service.EmailService;
 import com.gmc.backend.service.NotificationService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.LocalDateTime;
@@ -27,12 +29,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
-
-import static com.gmc.backend.model.AppointmentStatus.APPROVED;
-import static com.gmc.backend.model.AppointmentStatus.CANCELLED;
-import static com.gmc.backend.model.AppointmentStatus.COMPLETED;
-import static com.gmc.backend.model.AppointmentStatus.PENDING;
-import static com.gmc.backend.model.AppointmentStatus.RESCHEDULED;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -52,11 +51,13 @@ public class AppointmentServiceImpl implements AppointmentService {
     @Override
     @Transactional
     public AppointmentResponse bookAppointment(Long userId, AppointmentRequest request) {
-        User user = userRepository.findById(userId)
+        User user = userRepository
+                .findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
         ProductCategory category = null;
         if (request.getCategoryId() != null) {
-            category = categoryRepository.findById(request.getCategoryId())
+            category = categoryRepository
+                    .findById(request.getCategoryId())
                     .orElseThrow(() -> new BusinessRuleException("Please choose a valid product line"));
         }
         Appointment appointment = Appointment.builder()
@@ -68,15 +69,20 @@ public class AppointmentServiceImpl implements AppointmentService {
                 .imageUrls(uploadedImages(request.getImageUrls()))
                 .build();
         Appointment saved = appointmentRepository.save(appointment);
-        notifyUser(userId, "We received your appointment request for " + format(request.getDate())
-                + ". We'll confirm it soon.");
+        notifyUser(
+                userId,
+                "We received your appointment request for " + format(request.getDate()) + ". We'll confirm it soon.");
         // A customer is waiting for a reply, so admins also get an email
         int images = saved.getImageUrls().size();
-        notificationService.notifyAdmins("New appointment request from " + user.getName()
-                + (category != null ? " about " + category.getName() : "") + " for "
-                + format(request.getDate()) + (images > 0 ? " (" + images + " image" + (images > 1 ? "s" : "")
-                + " attached)" : "") + ": \"" + request.getMessage() + "\"",
-                "APPOINTMENT", ADMIN_APPOINTMENTS_LINK, "New appointment request");
+        notificationService.notifyAdmins(
+                "New appointment request from " + user.getName()
+                        + (category != null ? " about " + category.getName() : "") + " for "
+                        + format(request.getDate())
+                        + (images > 0 ? " (" + images + " image" + (images > 1 ? "s" : "") + " attached)" : "") + ": \""
+                        + request.getMessage() + "\"",
+                "APPOINTMENT",
+                ADMIN_APPOINTMENTS_LINK,
+                "New appointment request");
         return toResponse(saved);
     }
 
@@ -89,11 +95,15 @@ public class AppointmentServiceImpl implements AppointmentService {
         appointment.setDate(request.getNewDate());
         appointment.setStatus(PENDING);
         Appointment saved = appointmentRepository.save(appointment);
-        notifyUser(userId, "Reschedule requested for " + format(request.getNewDate())
-                + ". We'll confirm the new time soon.");
-        notificationService.notifyAdmins(appointment.getUser().getName() + " asked to reschedule their "
-                + "appointment to " + format(request.getNewDate()) + ". Please approve the new time.",
-                "APPOINTMENT", ADMIN_APPOINTMENTS_LINK, null);
+        notifyUser(
+                userId,
+                "Reschedule requested for " + format(request.getNewDate()) + ". We'll confirm the new time soon.");
+        notificationService.notifyAdmins(
+                appointment.getUser().getName() + " asked to reschedule their " + "appointment to "
+                        + format(request.getNewDate()) + ". Please approve the new time.",
+                "APPOINTMENT",
+                ADMIN_APPOINTMENTS_LINK,
+                null);
         return toResponse(saved);
     }
 
@@ -105,8 +115,11 @@ public class AppointmentServiceImpl implements AppointmentService {
         appointment.setStatus(CANCELLED);
         Appointment saved = appointmentRepository.save(appointment);
         notifyUser(userId, "Your appointment on " + format(saved.getDate()) + " was cancelled.");
-        notificationService.notifyAdmins(appointment.getUser().getName() + " cancelled their appointment on "
-                + format(saved.getDate()) + ".", "APPOINTMENT", ADMIN_APPOINTMENTS_LINK, null);
+        notificationService.notifyAdmins(
+                appointment.getUser().getName() + " cancelled their appointment on " + format(saved.getDate()) + ".",
+                "APPOINTMENT",
+                ADMIN_APPOINTMENTS_LINK,
+                null);
         return toResponse(saved);
     }
 
@@ -123,9 +136,7 @@ public class AppointmentServiceImpl implements AppointmentService {
     @Override
     @Transactional(readOnly = true)
     public List<AppointmentResponse> getAllAppointments() {
-        return appointmentRepository.findAll().stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+        return appointmentRepository.findAll().stream().map(this::toResponse).collect(Collectors.toList());
     }
 
     @Override
@@ -143,15 +154,15 @@ public class AppointmentServiceImpl implements AppointmentService {
         Appointment appointment = findById(appointmentId);
         requireStatus(appointment, "approve", PENDING, RESCHEDULED);
         if (appointment.getDate().isBefore(LocalDateTime.now())) {
-            throw new BusinessRuleException("This appointment time has already passed. "
-                    + "Reschedule it to a new time instead.");
+            throw new BusinessRuleException(
+                    "This appointment time has already passed. " + "Reschedule it to a new time instead.");
         }
         appointment.setMeetingLink(validateMeetingLink(meetingLink));
         appointment.setAdminNote(clean(note));
         appointment.setStatus(APPROVED);
         Appointment saved = appointmentRepository.save(appointment);
-        notifyCustomer(saved, "Appointment approved",
-                "Your appointment on " + format(saved.getDate()) + " was approved.");
+        notifyCustomer(
+                saved, "Appointment approved", "Your appointment on " + format(saved.getDate()) + " was approved.");
         return toResponse(saved);
     }
 
@@ -165,7 +176,9 @@ public class AppointmentServiceImpl implements AppointmentService {
         appointment.setAdminNote(clean(request.getNote()));
         appointment.setStatus(RESCHEDULED);
         Appointment saved = appointmentRepository.save(appointment);
-        notifyCustomer(saved, "Appointment rescheduled",
+        notifyCustomer(
+                saved,
+                "Appointment rescheduled",
                 "Your appointment was rescheduled to " + format(request.getNewDate()) + ".");
         return toResponse(saved);
     }
@@ -179,8 +192,8 @@ public class AppointmentServiceImpl implements AppointmentService {
         appointment.setAdminNote(clean(note));
         appointment.setStatus(CANCELLED);
         Appointment saved = appointmentRepository.save(appointment);
-        notifyCustomer(saved, "Appointment cancelled",
-                "Your appointment on " + format(saved.getDate()) + " was cancelled.");
+        notifyCustomer(
+                saved, "Appointment cancelled", "Your appointment on " + format(saved.getDate()) + " was cancelled.");
         return toResponse(saved);
     }
 
@@ -188,16 +201,14 @@ public class AppointmentServiceImpl implements AppointmentService {
     // RESCHEDULED needs a new date (use adminReschedule), PENDING is only set by the customer.
     @Override
     @Transactional
-    public AppointmentResponse updateStatus(Long appointmentId, AppointmentStatus status,
-                                            String meetingLink, String note) {
+    public AppointmentResponse updateStatus(
+            Long appointmentId, AppointmentStatus status, String meetingLink, String note) {
         return switch (status) {
             case APPROVED -> approveAppointment(appointmentId, meetingLink, note);
             case CANCELLED -> adminCancel(appointmentId, note);
             case COMPLETED -> complete(appointmentId, note);
-            case RESCHEDULED -> throw new BusinessRuleException(
-                    "Use the reschedule endpoint to set a new date");
-            case PENDING -> throw new BusinessRuleException(
-                    "Status cannot be set back to PENDING");
+            case RESCHEDULED -> throw new BusinessRuleException("Use the reschedule endpoint to set a new date");
+            case PENDING -> throw new BusinessRuleException("Status cannot be set back to PENDING");
         };
     }
 
@@ -211,17 +222,17 @@ public class AppointmentServiceImpl implements AppointmentService {
         appointment.setAdminNote(clean(note));
         appointment.setStatus(COMPLETED);
         Appointment saved = appointmentRepository.save(appointment);
-        notifyCustomer(saved, "Appointment completed",
-                "Your appointment on " + format(saved.getDate()) + " is completed.");
+        notifyCustomer(
+                saved, "Appointment completed", "Your appointment on " + format(saved.getDate()) + " is completed.");
         return toResponse(saved);
     }
 
     // ════════════════════════════ HELPERS ══════════════════════════════════
 
     private Appointment findById(Long appointmentId) {
-        return appointmentRepository.findById(appointmentId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Appointment not found: " + appointmentId));
+        return appointmentRepository
+                .findById(appointmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment not found: " + appointmentId));
     }
 
     private Appointment findByIdAndUser(Long appointmentId, Long userId) {
@@ -239,8 +250,7 @@ public class AppointmentServiceImpl implements AppointmentService {
                 return;
             }
         }
-        throw new BusinessRuleException("Cannot " + action + " an appointment that is "
-                + appointment.getStatus());
+        throw new BusinessRuleException("Cannot " + action + " an appointment that is " + appointment.getStatus());
     }
 
     // In-app notification plus email for admin actions; includes the meeting link and note
@@ -254,7 +264,9 @@ public class AppointmentServiceImpl implements AppointmentService {
         }
         User user = appointment.getUser();
         notifyUser(user.getUserId(), String.join(" ", parts));
-        emailService.send(user.getEmail(), "GMC Lanka – " + subject,
+        emailService.send(
+                user.getEmail(),
+                "GMC Lanka – " + subject,
                 "Hi " + user.getName() + ",\n\n"
                         + String.join("\n\n", parts)
                         + "\n\nYou can view your appointments any time in your GMC Lanka account.\n\n"
@@ -270,7 +282,8 @@ public class AppointmentServiceImpl implements AppointmentService {
         try {
             URI uri = new URI(value);
             String scheme = uri.getScheme();
-            if (uri.getHost() == null || scheme == null
+            if (uri.getHost() == null
+                    || scheme == null
                     || !(scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https"))) {
                 throw new BusinessRuleException("Meeting link must be a valid http(s) URL");
             }

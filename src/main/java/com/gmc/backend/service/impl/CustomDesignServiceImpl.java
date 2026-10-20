@@ -9,12 +9,6 @@ import com.gmc.backend.model.User;
 import com.gmc.backend.repository.CustomDesignRepository;
 import com.gmc.backend.repository.UserRepository;
 import com.gmc.backend.service.CustomDesignService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -25,6 +19,11 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
@@ -42,9 +41,9 @@ public class CustomDesignServiceImpl implements CustomDesignService {
 
     @Override
     @Transactional
-    public CustomDesignResponse submitDesign(Long userId, String designName, String description,
-                                              MultipartFile file) {
-        User user = userRepository.findById(userId)
+    public CustomDesignResponse submitDesign(Long userId, String designName, String description, MultipartFile file) {
+        User user = userRepository
+                .findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
         String filePath = null;
         if (file != null && !file.isEmpty()) {
@@ -70,21 +69,21 @@ public class CustomDesignServiceImpl implements CustomDesignService {
 
     @Override
     public List<CustomDesignResponse> getAllDesigns() {
-        return customDesignRepository.findAll().stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+        return customDesignRepository.findAll().stream().map(this::toResponse).collect(Collectors.toList());
     }
 
     @Override
     public CustomDesignResponse getDesignById(Long designId) {
-        return toResponse(customDesignRepository.findById(designId)
+        return toResponse(customDesignRepository
+                .findById(designId)
                 .orElseThrow(() -> new ResourceNotFoundException("Design not found: " + designId)));
     }
 
     @Override
     @Transactional
     public CustomDesignResponse updateStatus(Long designId, CustomDesignStatus status) {
-        CustomDesign design = customDesignRepository.findById(designId)
+        CustomDesign design = customDesignRepository
+                .findById(designId)
                 .orElseThrow(() -> new ResourceNotFoundException("Design not found: " + designId));
         design.setStatus(status);
         return toResponse(customDesignRepository.save(design));

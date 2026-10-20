@@ -6,6 +6,7 @@ import com.gmc.backend.dto.response.FeedbackResponse;
 import com.gmc.backend.security.CustomUserDetails;
 import com.gmc.backend.service.FeedbackService;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,8 +19,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/feedback")
 @RequiredArgsConstructor
@@ -29,10 +28,8 @@ public class FeedbackController {
 
     @PostMapping
     public ResponseEntity<FeedbackResponse> submit(
-            @AuthenticationPrincipal CustomUserDetails user,
-            @Valid @RequestBody FeedbackRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(feedbackService.submitFeedback(user.getId(), request));
+            @AuthenticationPrincipal CustomUserDetails user, @Valid @RequestBody FeedbackRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(feedbackService.submitFeedback(user.getId(), request));
     }
 
     @PutMapping("/{feedbackId}")
@@ -44,8 +41,7 @@ public class FeedbackController {
     }
 
     @GetMapping
-    public ResponseEntity<List<FeedbackResponse>> getMyFeedback(
-            @AuthenticationPrincipal CustomUserDetails user) {
+    public ResponseEntity<List<FeedbackResponse>> getMyFeedback(@AuthenticationPrincipal CustomUserDetails user) {
         return ResponseEntity.ok(feedbackService.getFeedbackByUser(user.getId()));
     }
 }

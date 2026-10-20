@@ -1,11 +1,10 @@
 package com.gmc.backend.dto.response;
 
 import com.gmc.backend.model.AppointmentStatus;
-import lombok.Builder;
-import lombok.Data;
-
 import java.time.LocalDateTime;
 import java.util.List;
+import lombok.Builder;
+import lombok.Data;
 
 @Data
 @Builder

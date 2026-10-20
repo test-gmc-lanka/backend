@@ -1,10 +1,10 @@
 package com.gmc.backend.security;
 
-import com.gmc.backend.model.User;
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.gmc.backend.model.User;
+import org.junit.jupiter.api.Test;
 
 class CustomUserDetailsTest {
 

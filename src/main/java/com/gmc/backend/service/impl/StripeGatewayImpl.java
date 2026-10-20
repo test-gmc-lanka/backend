@@ -1,23 +1,22 @@
 package com.gmc.backend.service.impl;
 
-import com.stripe.param.RefundCreateParams;
-import com.stripe.model.Refund;
 import com.gmc.backend.exception.BusinessRuleException;
 import com.gmc.backend.service.StripeGateway;
 import com.stripe.exception.SignatureVerificationException;
 import com.stripe.exception.StripeException;
 import com.stripe.model.Event;
 import com.stripe.model.PaymentIntent;
+import com.stripe.model.Refund;
 import com.stripe.model.StripeObject;
 import com.stripe.net.RequestOptions;
 import com.stripe.net.Webhook;
 import com.stripe.param.PaymentIntentCreateParams;
+import com.stripe.param.RefundCreateParams;
+import java.util.Locale;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-
-import java.util.Locale;
-import java.util.Optional;
 
 @Slf4j
 @Service
@@ -55,8 +54,7 @@ public class StripeGatewayImpl implements StripeGateway {
     }
 
     @Override
-    public Intent createPaymentIntent(long orderId, long amountMinor, String customerEmail,
-                                      String idempotencyKey) {
+    public Intent createPaymentIntent(long orderId, long amountMinor, String customerEmail, String idempotencyKey) {
         requireConfigured();
         PaymentIntentCreateParams.Builder params = PaymentIntentCreateParams.builder()
                 .setAmount(amountMinor)
@@ -110,10 +108,12 @@ public class StripeGatewayImpl implements StripeGateway {
             return false;
         }
         try {
-            Refund.create(RefundCreateParams.builder()
-                    .setPaymentIntent(paymentIntentId)
-                    .setReason(RefundCreateParams.Reason.REQUESTED_BY_CUSTOMER)
-                    .build(), options("refund-" + paymentIntentId));
+            Refund.create(
+                    RefundCreateParams.builder()
+                            .setPaymentIntent(paymentIntentId)
+                            .setReason(RefundCreateParams.Reason.REQUESTED_BY_CUSTOMER)
+                            .build(),
+                    options("refund-" + paymentIntentId));
             return true;
         } catch (StripeException e) {
             log.error("Stripe refund failed for {}: {}", paymentIntentId, e.getMessage());
@@ -147,14 +147,15 @@ public class StripeGatewayImpl implements StripeGateway {
 
     private void requireConfigured() {
         if (!isConfigured()) {
-            throw new BusinessRuleException("Card payments are not available right now. "
-                    + "Please choose Cash on Delivery.");
+            throw new BusinessRuleException(
+                    "Card payments are not available right now. " + "Please choose Cash on Delivery.");
         }
     }
 
     private RequestOptions options(String idempotencyKey) {
         // Short timeouts so a slow Stripe response can't hold requests (or DB locks) for long
-        RequestOptions.RequestOptionsBuilder builder = RequestOptions.builder().setApiKey(secretKey)
+        RequestOptions.RequestOptionsBuilder builder = RequestOptions.builder()
+                .setApiKey(secretKey)
                 .setConnectTimeout(10_000)
                 .setReadTimeout(20_000)
                 .setMaxNetworkRetries(1);
@@ -165,7 +166,11 @@ public class StripeGatewayImpl implements StripeGateway {
     }
 
     private static Intent toIntent(PaymentIntent pi) {
-        return new Intent(pi.getId(), pi.getStatus(),
-                pi.getAmount() == null ? 0 : pi.getAmount(), pi.getCurrency(), pi.getClientSecret());
+        return new Intent(
+                pi.getId(),
+                pi.getStatus(),
+                pi.getAmount() == null ? 0 : pi.getAmount(),
+                pi.getCurrency(),
+                pi.getClientSecret());
     }
 }

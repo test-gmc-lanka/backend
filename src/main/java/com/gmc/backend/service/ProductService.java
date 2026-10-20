@@ -2,9 +2,8 @@ package com.gmc.backend.service;
 
 import com.gmc.backend.dto.request.ProductRequest;
 import com.gmc.backend.dto.response.ProductResponse;
-import org.springframework.web.multipart.MultipartFile;
-
 import java.util.List;
+import org.springframework.web.multipart.MultipartFile;
 
 public interface ProductService {
 
@@ -29,5 +28,6 @@ public interface ProductService {
 
     /** Admin view: every product, including archived ones. */
     List<ProductResponse> getAllProductsIncludingArchived();
+
     List<String> uploadImages(List<MultipartFile> files);
 }

@@ -3,6 +3,7 @@ package com.gmc.backend.controller;
 import com.gmc.backend.dto.response.CustomDesignResponse;
 import com.gmc.backend.security.CustomUserDetails;
 import com.gmc.backend.service.CustomDesignService;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -14,8 +15,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/custom-designs")
@@ -35,8 +34,7 @@ public class CustomDesignController {
     }
 
     @GetMapping
-    public ResponseEntity<List<CustomDesignResponse>> getMyDesigns(
-            @AuthenticationPrincipal CustomUserDetails user) {
+    public ResponseEntity<List<CustomDesignResponse>> getMyDesigns(@AuthenticationPrincipal CustomUserDetails user) {
         return ResponseEntity.ok(customDesignService.getDesignsByUser(user.getId()));
     }
 }

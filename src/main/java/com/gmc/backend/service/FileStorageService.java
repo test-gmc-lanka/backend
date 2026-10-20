@@ -1,8 +1,7 @@
 package com.gmc.backend.service;
 
-import org.springframework.web.multipart.MultipartFile;
-
 import java.util.List;
+import org.springframework.web.multipart.MultipartFile;
 
 public interface FileStorageService {
 

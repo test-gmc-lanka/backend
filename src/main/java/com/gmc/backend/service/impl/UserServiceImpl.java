@@ -1,8 +1,5 @@
 package com.gmc.backend.service.impl;
 
-import com.gmc.backend.repository.RefreshTokenRepository;
-import java.util.Set;
-import java.util.Locale;
 import com.gmc.backend.dto.request.ChangePasswordRequest;
 import com.gmc.backend.dto.request.CreateUserRequest;
 import com.gmc.backend.dto.request.UpdateProfileRequest;
@@ -13,18 +10,20 @@ import com.gmc.backend.exception.InvalidFileException;
 import com.gmc.backend.exception.ResourceNotFoundException;
 import com.gmc.backend.model.Role;
 import com.gmc.backend.model.User;
+import com.gmc.backend.repository.RefreshTokenRepository;
 import com.gmc.backend.repository.RoleRepository;
 import com.gmc.backend.repository.UserRepository;
 import com.gmc.backend.service.FileStorageService;
 import com.gmc.backend.service.UserService;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -35,6 +34,7 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final FileStorageService fileStorageService;
     private final RefreshTokenRepository refreshTokenRepository;
+
     @Override
     public UserResponse getProfile(Long userId) {
         return toResponse(findById(userId));
@@ -73,8 +73,7 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public UserResponse updateProfileImage(Long userId, MultipartFile file) {
         User user = findById(userId);
-        List<String> stored = fileStorageService.storeImages(
-                file == null ? List.of() : List.of(file), "avatars");
+        List<String> stored = fileStorageService.storeImages(file == null ? List.of() : List.of(file), "avatars");
         if (stored.isEmpty()) {
             throw new InvalidFileException("No image was provided");
         }
@@ -92,9 +91,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<UserResponse> getAllUsers() {
-        return userRepository.findAll().stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+        return userRepository.findAll().stream().map(this::toResponse).collect(Collectors.toList());
     }
 
     @Override
@@ -117,8 +114,10 @@ public class UserServiceImpl implements UserService {
         if (!Set.of("CUSTOMER", "TECHNICIAN", "ADMIN").contains(roleName)) {
             throw new BusinessRuleException("Role must be CUSTOMER, TECHNICIAN or ADMIN");
         }
-        Role role = roleRepository.findByRoleName(roleName)
-                .orElseGet(() -> roleRepository.save(Role.builder().roleName(roleName).build()));
+        Role role = roleRepository
+                .findByRoleName(roleName)
+                .orElseGet(() ->
+                        roleRepository.save(Role.builder().roleName(roleName).build()));
         User user = User.builder()
                 .name(request.getName().trim())
                 .email(email)
@@ -137,7 +136,8 @@ public class UserServiceImpl implements UserService {
         User user = findById(userId);
         if ("ADMIN".equals(user.getRole().getRoleName())) {
             long activeAdmins = userRepository.findByRole_RoleName("ADMIN").stream()
-                    .filter(u -> !Boolean.FALSE.equals(u.getActive())).count();
+                    .filter(u -> !Boolean.FALSE.equals(u.getActive()))
+                    .count();
             if (activeAdmins <= 1) {
                 throw new BusinessRuleException("You can't deactivate the last active admin");
             }
@@ -155,7 +155,8 @@ public class UserServiceImpl implements UserService {
     }
 
     private User findById(Long userId) {
-        return userRepository.findById(userId)
+        return userRepository
+                .findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
     }
 

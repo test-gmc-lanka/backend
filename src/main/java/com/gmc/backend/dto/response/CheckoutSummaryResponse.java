@@ -1,9 +1,8 @@
 package com.gmc.backend.dto.response;
 
+import java.math.BigDecimal;
 import lombok.Builder;
 import lombok.Data;
-
-import java.math.BigDecimal;
 
 /** What the checkout page shows: the exact amounts the order will be created (and charged) with. */
 @Data
