@@ -1,8 +1,5 @@
 package com.gmc.backend.controller;
 
-import com.gmc.backend.exception.BusinessRuleException;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import com.gmc.backend.security.CustomUserDetails;
 import com.gmc.backend.dto.request.AppointmentStatusRequest;
 import com.gmc.backend.dto.request.CategoryRequest;
 import com.gmc.backend.dto.request.CreateUserRequest;
@@ -20,25 +17,32 @@ import com.gmc.backend.dto.response.MaintenanceResponse;
 import com.gmc.backend.dto.response.OrderResponse;
 import com.gmc.backend.dto.response.ProductResponse;
 import com.gmc.backend.dto.response.UserResponse;
+import com.gmc.backend.exception.BusinessRuleException;
 import com.gmc.backend.model.AppointmentStatus;
 import com.gmc.backend.model.CustomDesignStatus;
 import com.gmc.backend.model.OrderStatus;
+import com.gmc.backend.security.CustomUserDetails;
 import com.gmc.backend.service.AppointmentService;
 import com.gmc.backend.service.CategoryService;
 import com.gmc.backend.service.ComplaintService;
 import com.gmc.backend.service.CustomDesignService;
-import com.gmc.backend.service.FileStorageService;
 import com.gmc.backend.service.FeedbackService;
+import com.gmc.backend.service.FileStorageService;
 import com.gmc.backend.service.InvoiceService;
 import com.gmc.backend.service.MaintenanceService;
 import com.gmc.backend.service.OrderService;
 import com.gmc.backend.service.ProductService;
 import com.gmc.backend.service.UserService;
 import jakarta.validation.Valid;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -51,11 +55,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -80,7 +79,8 @@ public class AdminController {
     public ResponseEntity<DashboardStatsResponse> getDashboard() {
         List<OrderResponse> allOrders = orderService.getAllOrders();
         long pending = allOrders.stream()
-                .filter(o -> o.getStatus() == OrderStatus.PENDING).count();
+                .filter(o -> o.getStatus() == OrderStatus.PENDING)
+                .count();
         BigDecimal revenue = allOrders.stream()
                 .filter(o -> o.getStatus() == OrderStatus.DELIVERED)
                 .map(OrderResponse::getTotalAmount)
@@ -109,8 +109,7 @@ public class AdminController {
     // ── Users ─────────────────────────────────────────────────────────────────
 
     @GetMapping("/users")
-    public ResponseEntity<List<UserResponse>> getUsers(
-            @RequestParam(required = false) String role) {
+    public ResponseEntity<List<UserResponse>> getUsers(@RequestParam(required = false) String role) {
         if (role != null && !role.isBlank()) {
             return ResponseEntity.ok(userService.getUsersByRole(role));
         }
@@ -124,8 +123,7 @@ public class AdminController {
 
     @PatchMapping("/users/{userId}/deactivate")
     public ResponseEntity<UserResponse> deactivateUser(
-            @AuthenticationPrincipal CustomUserDetails admin,
-            @PathVariable Long userId) {
+            @AuthenticationPrincipal CustomUserDetails admin, @PathVariable Long userId) {
         if (admin.getId().equals(userId)) {
             throw new BusinessRuleException("You can't deactivate your own account");
         }
@@ -140,8 +138,7 @@ public class AdminController {
     // ── Orders ────────────────────────────────────────────────────────────────
 
     @GetMapping("/orders")
-    public ResponseEntity<List<OrderResponse>> getAllOrders(
-            @RequestParam(required = false) OrderStatus status) {
+    public ResponseEntity<List<OrderResponse>> getAllOrders(@RequestParam(required = false) OrderStatus status) {
         if (status != null) {
             return ResponseEntity.ok(orderService.getOrdersByStatus(status));
         }
@@ -150,8 +147,7 @@ public class AdminController {
 
     @PutMapping("/orders/{orderId}/status")
     public ResponseEntity<OrderResponse> updateOrderStatus(
-            @PathVariable Long orderId,
-            @Valid @RequestBody OrderStatusUpdateRequest request) {
+            @PathVariable Long orderId, @Valid @RequestBody OrderStatusUpdateRequest request) {
         return ResponseEntity.ok(orderService.updateOrderStatus(orderId, request.getStatus()));
     }
 
@@ -168,17 +164,14 @@ public class AdminController {
 
     @PutMapping("/appointments/{appointmentId}/status")
     public ResponseEntity<AppointmentResponse> updateAppointmentStatus(
-            @PathVariable Long appointmentId,
-            @Valid @RequestBody AppointmentStatusRequest request) {
-        return ResponseEntity.ok(
-                appointmentService.updateStatus(appointmentId, request.getStatus(),
-                        request.getMeetingLink(), request.getNote()));
+            @PathVariable Long appointmentId, @Valid @RequestBody AppointmentStatusRequest request) {
+        return ResponseEntity.ok(appointmentService.updateStatus(
+                appointmentId, request.getStatus(), request.getMeetingLink(), request.getNote()));
     }
 
     @PutMapping("/appointments/{appointmentId}/reschedule")
     public ResponseEntity<AppointmentResponse> rescheduleAppointment(
-            @PathVariable Long appointmentId,
-            @Valid @RequestBody RescheduleRequest request) {
+            @PathVariable Long appointmentId, @Valid @RequestBody RescheduleRequest request) {
         return ResponseEntity.ok(appointmentService.adminReschedule(appointmentId, request));
     }
 
@@ -192,8 +185,7 @@ public class AdminController {
     // Moderation: hide abusive/spam reviews from the product page (and show them again)
     @PatchMapping("/feedback/{feedbackId}/visibility")
     public ResponseEntity<FeedbackResponse> setFeedbackVisibility(
-            @PathVariable Long feedbackId,
-            @RequestParam boolean hidden) {
+            @PathVariable Long feedbackId, @RequestParam boolean hidden) {
         return ResponseEntity.ok(feedbackService.setHidden(feedbackId, hidden));
     }
 
@@ -204,8 +196,7 @@ public class AdminController {
 
     @PatchMapping("/complaints/{complaintId}/status")
     public ResponseEntity<ComplaintResponse> updateComplaintStatus(
-            @PathVariable Long complaintId,
-            @RequestParam String status) {
+            @PathVariable Long complaintId, @RequestParam String status) {
         return ResponseEntity.ok(complaintService.updateComplaintStatus(complaintId, status));
     }
 
@@ -218,8 +209,7 @@ public class AdminController {
 
     @PatchMapping("/custom-designs/{designId}/status")
     public ResponseEntity<CustomDesignResponse> updateDesignStatus(
-            @PathVariable Long designId,
-            @RequestParam CustomDesignStatus status) {
+            @PathVariable Long designId, @RequestParam CustomDesignStatus status) {
         return ResponseEntity.ok(customDesignService.updateStatus(designId, status));
     }
 
@@ -232,8 +222,7 @@ public class AdminController {
 
     @PostMapping("/invoices/orders/{orderId}")
     public ResponseEntity<InvoiceResponse> generateInvoice(@PathVariable Long orderId) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(invoiceService.generateInvoice(orderId));
+        return ResponseEntity.status(HttpStatus.CREATED).body(invoiceService.generateInvoice(orderId));
     }
 
     // ── Maintenance ───────────────────────────────────────────────────────────
@@ -244,17 +233,13 @@ public class AdminController {
     }
 
     @PostMapping("/maintenance")
-    public ResponseEntity<MaintenanceResponse> assignMaintenance(
-            @Valid @RequestBody MaintenanceAssignRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(maintenanceService.assignMaintenance(request));
+    public ResponseEntity<MaintenanceResponse> assignMaintenance(@Valid @RequestBody MaintenanceAssignRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(maintenanceService.assignMaintenance(request));
     }
 
     @PostMapping(value = "/maintenance/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<List<String>> uploadMaintenanceImages(
-            @RequestPart("files") List<MultipartFile> files) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(fileStorageService.storeImages(files, "maintenance"));
+    public ResponseEntity<List<String>> uploadMaintenanceImages(@RequestPart("files") List<MultipartFile> files) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(fileStorageService.storeImages(files, "maintenance"));
     }
 
     // ── Products (admin list includes archived ones) ─────────────────────────
@@ -267,16 +252,13 @@ public class AdminController {
     // ── Categories ────────────────────────────────────────────────────────────
 
     @PostMapping("/categories")
-    public ResponseEntity<CategoryResponse> createCategory(
-            @Valid @RequestBody CategoryRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(categoryService.createCategory(request));
+    public ResponseEntity<CategoryResponse> createCategory(@Valid @RequestBody CategoryRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(categoryService.createCategory(request));
     }
 
     @PutMapping("/categories/{categoryId}")
     public ResponseEntity<CategoryResponse> updateCategory(
-            @PathVariable Long categoryId,
-            @Valid @RequestBody CategoryRequest request) {
+            @PathVariable Long categoryId, @Valid @RequestBody CategoryRequest request) {
         return ResponseEntity.ok(categoryService.updateCategory(categoryId, request));
     }
 

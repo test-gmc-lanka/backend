@@ -1,10 +1,5 @@
 package com.gmc.backend.service.impl;
 
-import org.springframework.transaction.support.TransactionTemplate;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.beans.factory.annotation.Autowired;
-import java.util.function.Supplier;
-import java.util.Map;
 import com.gmc.backend.dto.request.PlaceOrderRequest;
 import com.gmc.backend.dto.response.CheckoutSummaryResponse;
 import com.gmc.backend.dto.response.OrderItemResponse;
@@ -35,29 +30,32 @@ import com.gmc.backend.service.EmailService;
 import com.gmc.backend.service.NotificationService;
 import com.gmc.backend.service.OrderService;
 import com.gmc.backend.service.StripeGateway;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class OrderServiceImpl implements OrderService {
 
-    private static final Set<OrderStatus> TERMINAL_STATUSES =
-            EnumSet.of(OrderStatus.DELIVERED, OrderStatus.CANCELLED);
+    private static final Set<OrderStatus> TERMINAL_STATUSES = EnumSet.of(OrderStatus.DELIVERED, OrderStatus.CANCELLED);
 
     // One step forward at a time; cancelling is only possible before the parcel leaves
     private static final Map<OrderStatus, Set<OrderStatus>> ALLOWED_TRANSITIONS = Map.of(
@@ -91,7 +89,8 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public CheckoutSummaryResponse getCheckoutSummary(Long userId) {
-        List<CartItem> cartItems = cartRepository.findByUser_UserId(userId)
+        List<CartItem> cartItems = cartRepository
+                .findByUser_UserId(userId)
                 .map(cartItemRepository::findByCart)
                 .orElse(List.of());
         BigDecimal subtotal = cartItems.stream()
@@ -115,10 +114,11 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public PlaceOrderResponse placeOrder(Long userId, PlaceOrderRequest request) {
-        User user = userRepository.findById(userId)
+        User user = userRepository
+                .findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
-        Cart cart = cartRepository.findByUser_UserId(userId)
-                .orElseThrow(() -> new BusinessRuleException("Cart is empty"));
+        Cart cart =
+                cartRepository.findByUser_UserId(userId).orElseThrow(() -> new BusinessRuleException("Cart is empty"));
         List<CartItem> cartItems = cartItemRepository.findByCart(cart);
         if (cartItems.isEmpty()) {
             throw new BusinessRuleException("Cart is empty");
@@ -128,8 +128,8 @@ public class OrderServiceImpl implements OrderService {
             throw new BusinessRuleException("Choose a payment method");
         }
         if (paymentMethod == PaymentMethod.CARD && !stripeGateway.isConfigured()) {
-            throw new BusinessRuleException("Card payments are not available right now. "
-                    + "Please choose Cash on Delivery.");
+            throw new BusinessRuleException(
+                    "Card payments are not available right now. " + "Please choose Cash on Delivery.");
         }
 
         OrderType orderType = (request.getOrderType() != null) ? request.getOrderType() : OrderType.B2C;
@@ -149,27 +149,30 @@ public class OrderServiceImpl implements OrderService {
                 .build();
 
         // Reserve stock; row locks stop two checkouts from selling the same last unit
-        List<OrderItem> orderItems = cartItems.stream().map(ci -> {
-            Product product = lockProduct(ci.getProduct());
-            if (Boolean.FALSE.equals(product.getIsActive())) {
-                throw new BusinessRuleException(product.getName()
-                        + " is no longer available. Please remove it from your cart.");
-            }
-            int available = product.getStockQuantity() == null ? 0 : product.getStockQuantity();
-            if (available < ci.getQuantity()) {
-                throw new BusinessRuleException(available == 0
-                        ? product.getName() + " is out of stock. Please remove it from your cart."
-                        : "Only " + available + " of " + product.getName() + " left in stock. "
-                                + "Please reduce the quantity in your cart.");
-            }
-            product.setStockQuantity(available - ci.getQuantity());
-            return OrderItem.builder()
-                    .order(newOrder)
-                    .product(product)
-                    .quantity(ci.getQuantity())
-                    .unitPrice(product.getPrice())
-                    .build();
-        }).collect(Collectors.toList());
+        List<OrderItem> orderItems = cartItems.stream()
+                .map(ci -> {
+                    Product product = lockProduct(ci.getProduct());
+                    if (Boolean.FALSE.equals(product.getIsActive())) {
+                        throw new BusinessRuleException(
+                                product.getName() + " is no longer available. Please remove it from your cart.");
+                    }
+                    int available = product.getStockQuantity() == null ? 0 : product.getStockQuantity();
+                    if (available < ci.getQuantity()) {
+                        throw new BusinessRuleException(
+                                available == 0
+                                        ? product.getName() + " is out of stock. Please remove it from your cart."
+                                        : "Only " + available + " of " + product.getName() + " left in stock. "
+                                                + "Please reduce the quantity in your cart.");
+                    }
+                    product.setStockQuantity(available - ci.getQuantity());
+                    return OrderItem.builder()
+                            .order(newOrder)
+                            .product(product)
+                            .quantity(ci.getQuantity())
+                            .unitPrice(product.getPrice())
+                            .build();
+                })
+                .collect(Collectors.toList());
         newOrder.setItems(orderItems);
 
         BigDecimal subtotal = orderItems.stream()
@@ -187,13 +190,20 @@ public class OrderServiceImpl implements OrderService {
         // Card orders: the browser asks for the card form next (startPayment). Creating the Stripe
         // payment there keeps slow network calls out of this transaction, which holds stock locks.
         if (paymentMethod == PaymentMethod.CASH_ON_DELIVERY) {
-            notificationService.sendNotification(userId, "Your order #" + saved.getOrderId()
-                    + " has been placed. Please keep " + formatMoney(saved.getTotalAmount())
-                    + " ready to pay on delivery.", "ORDER", customerLink(saved));
+            notificationService.sendNotification(
+                    userId,
+                    "Your order #" + saved.getOrderId()
+                            + " has been placed. Please keep " + formatMoney(saved.getTotalAmount())
+                            + " ready to pay on delivery.",
+                    "ORDER",
+                    customerLink(saved));
             sendOrderConfirmationEmail(saved);
-            notificationService.notifyAdmins("New order #" + saved.getOrderId() + " from " + user.getName()
-                    + " — " + formatMoney(saved.getTotalAmount()) + ", cash on delivery.",
-                    "ORDER", ADMIN_ORDERS_LINK, null);
+            notificationService.notifyAdmins(
+                    "New order #" + saved.getOrderId() + " from " + user.getName() + " — "
+                            + formatMoney(saved.getTotalAmount()) + ", cash on delivery.",
+                    "ORDER",
+                    ADMIN_ORDERS_LINK,
+                    null);
         }
         return PlaceOrderResponse.builder().order(toResponse(saved)).build();
     }
@@ -218,7 +228,10 @@ public class OrderServiceImpl implements OrderService {
             if (intent.succeeded()) {
                 // Paid while the webhook was on its way: record it (no exception, or it would roll back)
                 applyIntent(order, intent);
-                return PaymentSessionResponse.builder().orderId(order.getOrderId()).alreadyPaid(true).build();
+                return PaymentSessionResponse.builder()
+                        .orderId(order.getOrderId())
+                        .alreadyPaid(true)
+                        .build();
             }
             if (!intent.canceled()) {
                 return paymentSession(order, intent.clientSecret());
@@ -227,8 +240,10 @@ public class OrderServiceImpl implements OrderService {
         // No usable payment yet (or the previous one was cancelled): start a new one.
         // The key is stable per intent id, so a retried request doesn't create a second payment.
         String attempt = order.getStripePaymentIntentId() == null ? "initial" : order.getStripePaymentIntentId();
-        StripeGateway.Intent intent = stripeGateway.createPaymentIntent(order.getOrderId(),
-                toMinorUnits(order.getTotalAmount()), order.getUser().getEmail(),
+        StripeGateway.Intent intent = stripeGateway.createPaymentIntent(
+                order.getOrderId(),
+                toMinorUnits(order.getTotalAmount()),
+                order.getUser().getEmail(),
                 "gmc-order-" + order.getOrderId() + "-" + attempt);
         order.setStripePaymentIntentId(intent.id());
         order.setPaymentStatus(PaymentStatus.PENDING);
@@ -276,7 +291,8 @@ public class OrderServiceImpl implements OrderService {
 
     private boolean expireIfStillUnpaid(Long orderId) {
         Order order = orderRepository.findByIdForUpdate(orderId).orElse(null);
-        if (order == null || order.getStatus() != OrderStatus.PENDING
+        if (order == null
+                || order.getStatus() != OrderStatus.PENDING
                 || order.getPaymentStatus() == PaymentStatus.COMPLETED) {
             return false;
         }
@@ -289,10 +305,13 @@ public class OrderServiceImpl implements OrderService {
         restock(order);
         stripeGateway.cancelPaymentIntent(order.getStripePaymentIntentId());
         orderRepository.save(order);
-        notifyCustomer(order, "Order #" + order.getOrderId() + " cancelled",
+        notifyCustomer(
+                order,
+                "Order #" + order.getOrderId() + " cancelled",
                 "Order #" + order.getOrderId() + " was cancelled because payment wasn't completed within "
                         + unpaidOrderExpiryMinutes + " minutes. Your items are back in stock if you'd "
-                        + "like to order them again.", true);
+                        + "like to order them again.",
+                true);
         return true;
     }
 
@@ -302,7 +321,8 @@ public class OrderServiceImpl implements OrderService {
 
     // Updates the order from the payment's real state in Stripe
     private void syncWithStripe(Order order) {
-        if (order.getStripePaymentIntentId() == null || order.getPaymentStatus() == PaymentStatus.COMPLETED
+        if (order.getStripePaymentIntentId() == null
+                || order.getPaymentStatus() == PaymentStatus.COMPLETED
                 || order.getPaymentStatus() == PaymentStatus.REFUNDED) {
             return;
         }
@@ -318,21 +338,32 @@ public class OrderServiceImpl implements OrderService {
                     && stripeGateway.currency().equalsIgnoreCase(intent.currency());
             if (!amountMatches || order.getStatus() == OrderStatus.CANCELLED) {
                 // Money arrived for an order we can't fulfil: give it back instead of keeping it
-                refundUnfulfillablePayment(order, intent, amountMatches
-                        ? "the order had already been cancelled"
-                        : "the amount charged didn't match the order total");
+                refundUnfulfillablePayment(
+                        order,
+                        intent,
+                        amountMatches
+                                ? "the order had already been cancelled"
+                                : "the amount charged didn't match the order total");
                 return;
             }
             order.setPaymentStatus(PaymentStatus.COMPLETED);
             order.setPaidAt(LocalDateTime.now());
             orderRepository.save(order);
-            notificationService.sendNotification(order.getUser().getUserId(), "Payment of "
-                    + formatMoney(order.getTotalAmount()) + " received for order #"
-                    + order.getOrderId() + ". We'll start preparing it soon.", "PAYMENT", customerLink(order));
+            notificationService.sendNotification(
+                    order.getUser().getUserId(),
+                    "Payment of "
+                            + formatMoney(order.getTotalAmount()) + " received for order #"
+                            + order.getOrderId() + ". We'll start preparing it soon.",
+                    "PAYMENT",
+                    customerLink(order));
             sendOrderConfirmationEmail(order);
-            notificationService.notifyAdmins("Payment received: order #" + order.getOrderId() + " from "
-                    + order.getUser().getName() + " — " + formatMoney(order.getTotalAmount())
-                    + " paid by card. Ready to process.", "PAYMENT", ADMIN_ORDERS_LINK, null);
+            notificationService.notifyAdmins(
+                    "Payment received: order #" + order.getOrderId() + " from "
+                            + order.getUser().getName() + " — " + formatMoney(order.getTotalAmount())
+                            + " paid by card. Ready to process.",
+                    "PAYMENT",
+                    ADMIN_ORDERS_LINK,
+                    null);
         } else if (intent.canceled()) {
             order.setPaymentStatus(PaymentStatus.FAILED);
             orderRepository.save(order);
@@ -345,15 +376,22 @@ public class OrderServiceImpl implements OrderService {
         if (refunded) {
             order.setPaymentStatus(PaymentStatus.REFUNDED);
             orderRepository.save(order);
-            notifyCustomer(order, "Payment refunded for order #" + order.getOrderId(),
+            notifyCustomer(
+                    order,
+                    "Payment refunded for order #" + order.getOrderId(),
                     "We received your card payment for order #" + order.getOrderId() + ", but " + reason
                             + ", so it has been refunded in full. Refunds usually appear within 5–10 business days.",
                     true);
         }
-        notificationService.notifyAdmins("Card payment for order #" + order.getOrderId() + " needs attention: "
-                + reason + ". " + (refunded ? "It was refunded automatically."
-                        : "Automatic refund FAILED — refund it in the Stripe Dashboard."),
-                "PAYMENT", ADMIN_ORDERS_LINK, refunded ? null : "Refund needed for order #" + order.getOrderId());
+        notificationService.notifyAdmins(
+                "Card payment for order #" + order.getOrderId() + " needs attention: "
+                        + reason + ". "
+                        + (refunded
+                                ? "It was refunded automatically."
+                                : "Automatic refund FAILED — refund it in the Stripe Dashboard."),
+                "PAYMENT",
+                ADMIN_ORDERS_LINK,
+                refunded ? null : "Refund needed for order #" + order.getOrderId());
     }
 
     // ════════════════════════════ QUERIES ═════════════════════════════════
@@ -365,18 +403,15 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public List<OrderResponse> getOrdersByUser(Long userId) {
-        User user = userRepository.findById(userId)
+        User user = userRepository
+                .findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
-        return orderRepository.findByUser(user).stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+        return orderRepository.findByUser(user).stream().map(this::toResponse).collect(Collectors.toList());
     }
 
     @Override
     public List<OrderResponse> getAllOrders() {
-        return orderRepository.findAll().stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+        return orderRepository.findAll().stream().map(this::toResponse).collect(Collectors.toList());
     }
 
     @Override
@@ -391,7 +426,8 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponse updateOrderStatus(Long orderId, OrderStatus newStatus) {
-        Order order = orderRepository.findByIdForUpdate(orderId)
+        Order order = orderRepository
+                .findByIdForUpdate(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found: " + orderId));
         if (TERMINAL_STATUSES.contains(order.getStatus())) {
             throw new InvalidOrderStatusTransitionException(order.getStatus(), newStatus);
@@ -404,8 +440,8 @@ public class OrderServiceImpl implements OrderService {
                     + " to " + newStatus + ". Orders move Pending → Processing → Shipped → Delivered, "
                     + "and can only be cancelled before shipping.");
         }
-        boolean unpaidCard = order.getPaymentMethod() == PaymentMethod.CARD
-                && order.getPaymentStatus() != PaymentStatus.COMPLETED;
+        boolean unpaidCard =
+                order.getPaymentMethod() == PaymentMethod.CARD && order.getPaymentStatus() != PaymentStatus.COMPLETED;
         if (unpaidCard && newStatus != OrderStatus.CANCELLED) {
             syncWithStripe(order); // in case the payment webhook hasn't arrived yet
             if (order.getPaymentStatus() != PaymentStatus.COMPLETED) {
@@ -425,9 +461,12 @@ public class OrderServiceImpl implements OrderService {
                     message += " Your card payment has been refunded and should appear within 5–10 business days.";
                 } else {
                     message += " We'll refund your card payment shortly.";
-                    notificationService.notifyAdmins("Automatic refund FAILED for cancelled order #" + orderId
-                            + " (" + formatMoney(order.getTotalAmount()) + "). Refund it in the Stripe Dashboard.",
-                            "PAYMENT", ADMIN_ORDERS_LINK, "Refund needed for order #" + orderId);
+                    notificationService.notifyAdmins(
+                            "Automatic refund FAILED for cancelled order #" + orderId + " ("
+                                    + formatMoney(order.getTotalAmount()) + "). Refund it in the Stripe Dashboard.",
+                            "PAYMENT",
+                            ADMIN_ORDERS_LINK,
+                            "Refund needed for order #" + orderId);
                 }
             }
         }
@@ -437,7 +476,8 @@ public class OrderServiceImpl implements OrderService {
         }
         order.setStatus(newStatus);
         Order saved = orderRepository.save(order);
-        boolean email = newStatus == OrderStatus.SHIPPED || newStatus == OrderStatus.DELIVERED
+        boolean email = newStatus == OrderStatus.SHIPPED
+                || newStatus == OrderStatus.DELIVERED
                 || newStatus == OrderStatus.CANCELLED;
         notifyCustomer(saved, "Order #" + orderId + " " + statusTitle(newStatus), message, email);
         return toResponse(saved);
@@ -456,7 +496,9 @@ public class OrderServiceImpl implements OrderService {
         User user = order.getUser();
         notificationService.sendNotification(user.getUserId(), message, "ORDER", customerLink(order));
         if (email) {
-            emailService.send(user.getEmail(), "GMC Lanka – " + subject,
+            emailService.send(
+                    user.getEmail(),
+                    "GMC Lanka – " + subject,
                     "Hi " + user.getName() + ",\n\n" + message
                             + "\n\nView your order any time in your GMC Lanka account.\n\n— GMC Lanka");
         }
@@ -468,8 +510,9 @@ public class OrderServiceImpl implements OrderService {
             case PENDING -> "Order #" + orderId + " is pending. We'll update you soon.";
             case PROCESSING -> "Order #" + orderId + " is being prepared.";
             case SHIPPED -> "Good news! Order #" + orderId + " is ready and on its way to you.";
-            case DELIVERED -> "Order #" + orderId + " has been delivered. Thank you for shopping with GMC Lanka! "
-                    + "We'd love your review — rate your items from the order page.";
+            case DELIVERED ->
+                "Order #" + orderId + " has been delivered. Thank you for shopping with GMC Lanka! "
+                        + "We'd love your review — rate your items from the order page.";
             case CANCELLED -> "Order #" + orderId + " was cancelled.";
         };
     }
@@ -529,27 +572,43 @@ public class OrderServiceImpl implements OrderService {
     private void sendOrderConfirmationEmail(Order order) {
         User user = order.getUser();
         StringBuilder body = new StringBuilder()
-                .append("Hi ").append(user.getName()).append(",\n\n")
+                .append("Hi ")
+                .append(user.getName())
+                .append(",\n\n")
                 .append("Thank you for your order! Here are the details.\n\n")
-                .append("Order #").append(order.getOrderId()).append('\n');
+                .append("Order #")
+                .append(order.getOrderId())
+                .append('\n');
         for (OrderItem item : order.getItems()) {
-            body.append("  • ").append(item.getProduct().getName()).append(" × ").append(item.getQuantity())
-                    .append("  ").append(formatMoney(item.getUnitPrice()
-                            .multiply(BigDecimal.valueOf(item.getQuantity())))).append('\n');
+            body.append("  • ")
+                    .append(item.getProduct().getName())
+                    .append(" × ")
+                    .append(item.getQuantity())
+                    .append("  ")
+                    .append(formatMoney(item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity()))))
+                    .append('\n');
         }
-        body.append("\nSubtotal: ").append(formatMoney(order.getSubtotal()))
-                .append("\nShipping: ").append(formatMoney(order.getShippingFee()))
-                .append("\nVAT: ").append(formatMoney(order.getTaxAmount()))
-                .append("\nTotal: ").append(formatMoney(order.getTotalAmount()))
-                .append("\n\nPayment: ").append(order.getPaymentMethod() == PaymentMethod.CARD
-                        ? "Paid by card" : "Cash on delivery")
-                .append("\nDeliver to: ").append(order.getShippingName()).append(", ")
-                .append(order.getShippingAddress()).append(", ").append(order.getShippingCity())
+        body.append("\nSubtotal: ")
+                .append(formatMoney(order.getSubtotal()))
+                .append("\nShipping: ")
+                .append(formatMoney(order.getShippingFee()))
+                .append("\nVAT: ")
+                .append(formatMoney(order.getTaxAmount()))
+                .append("\nTotal: ")
+                .append(formatMoney(order.getTotalAmount()))
+                .append("\n\nPayment: ")
+                .append(order.getPaymentMethod() == PaymentMethod.CARD ? "Paid by card" : "Cash on delivery")
+                .append("\nDeliver to: ")
+                .append(order.getShippingName())
+                .append(", ")
+                .append(order.getShippingAddress())
+                .append(", ")
+                .append(order.getShippingCity())
                 .append(order.getShippingPostalCode() == null ? "" : " " + order.getShippingPostalCode())
-                .append("\nPhone: ").append(order.getShippingPhone())
+                .append("\nPhone: ")
+                .append(order.getShippingPhone())
                 .append("\n\nYou can track your order any time in your GMC Lanka account.\n\n— GMC Lanka");
-        emailService.send(user.getEmail(), "GMC Lanka – Order #" + order.getOrderId() + " confirmed",
-                body.toString());
+        emailService.send(user.getEmail(), "GMC Lanka – Order #" + order.getOrderId() + " confirmed", body.toString());
     }
 
     private OrderResponse toResponse(Order order) {

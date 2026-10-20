@@ -1,10 +1,5 @@
 package com.gmc.backend.service.impl;
 
-import java.util.Locale;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.ResponseCookie;
-import org.springframework.http.HttpHeaders;
 import com.gmc.backend.dto.request.LoginRequest;
 import com.gmc.backend.dto.request.RegisterRequest;
 import com.gmc.backend.dto.response.AuthResponse;
@@ -19,15 +14,19 @@ import com.gmc.backend.service.AuthService;
 import com.gmc.backend.service.RefreshTokenResult;
 import com.gmc.backend.service.RefreshTokenService;
 import jakarta.servlet.http.HttpServletResponse;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
-import java.util.HashMap;
-import java.util.Map;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -38,6 +37,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Value("${app.cookie.secure:false}")
     private boolean secureCookies;
+
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
@@ -53,9 +53,10 @@ public class AuthServiceImpl implements AuthService {
             throw new DuplicateEmailException(email);
         }
 
-        Role defaultRole = roleRepository.findByRoleName("CUSTOMER")
-                .orElseGet(() -> roleRepository.save(
-                        Role.builder().roleName("CUSTOMER").build()));
+        Role defaultRole = roleRepository
+                .findByRoleName("CUSTOMER")
+                .orElseGet(() ->
+                        roleRepository.save(Role.builder().roleName("CUSTOMER").build()));
 
         User user = User.builder()
                 .name(request.getName().trim())
@@ -72,11 +73,9 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public AuthResponse login(LoginRequest request, HttpServletResponse response) {
         String email = normalizeEmail(request.getEmail());
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(email, request.getPassword()));
+        authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(email, request.getPassword()));
 
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException(email));
+        User user = userRepository.findByEmail(email).orElseThrow(() -> new UsernameNotFoundException(email));
 
         String rawToken = refreshTokenService.createRefreshToken(user.getUserId());
         addRefreshCookie(response, rawToken);
@@ -127,10 +126,18 @@ public class AuthServiceImpl implements AuthService {
     // HttpOnly (no JS access), SameSite=Strict (not sent cross-site), only sent to /api/auth,
     // Secure when app.cookie.secure=true (HTTPS in production)
     private void addRefreshCookie(HttpServletResponse response, String rawToken) {
-        response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie(rawToken, REFRESH_COOKIE_MAX_AGE).toString());
+        response.addHeader(
+                HttpHeaders.SET_COOKIE,
+                refreshCookie(rawToken, REFRESH_COOKIE_MAX_AGE).toString());
         // Remove the cookie older versions set on path "/"
-        response.addHeader(HttpHeaders.SET_COOKIE, ResponseCookie.from(REFRESH_COOKIE, "")
-                .path("/").maxAge(0).httpOnly(true).build().toString());
+        response.addHeader(
+                HttpHeaders.SET_COOKIE,
+                ResponseCookie.from(REFRESH_COOKIE, "")
+                        .path("/")
+                        .maxAge(0)
+                        .httpOnly(true)
+                        .build()
+                        .toString());
     }
 
     private void clearRefreshCookie(HttpServletResponse response) {

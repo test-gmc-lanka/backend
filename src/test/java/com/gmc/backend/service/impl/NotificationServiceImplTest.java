@@ -1,20 +1,5 @@
 package com.gmc.backend.service.impl;
 
-import com.gmc.backend.model.Notification;
-import com.gmc.backend.model.User;
-import com.gmc.backend.repository.NotificationRepository;
-import com.gmc.backend.repository.UserRepository;
-import com.gmc.backend.service.EmailService;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.util.List;
-import java.util.Optional;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -25,13 +10,29 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.gmc.backend.model.Notification;
+import com.gmc.backend.model.User;
+import com.gmc.backend.repository.NotificationRepository;
+import com.gmc.backend.repository.UserRepository;
+import com.gmc.backend.service.EmailService;
+import java.util.List;
+import java.util.Optional;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
 @ExtendWith(MockitoExtension.class)
 class NotificationServiceImplTest {
 
     @Mock
     private NotificationRepository notificationRepository;
+
     @Mock
     private UserRepository userRepository;
+
     @Mock
     private EmailService emailService;
 
@@ -39,7 +40,12 @@ class NotificationServiceImplTest {
     private NotificationServiceImpl notificationService;
 
     private User user(long id, String email, Boolean active) {
-        return User.builder().userId(id).name("User " + id).email(email).active(active).build();
+        return User.builder()
+                .userId(id)
+                .name("User " + id)
+                .email(email)
+                .active(active)
+                .build();
     }
 
     @Test
@@ -64,7 +70,9 @@ class NotificationServiceImplTest {
 
         ArgumentCaptor<Notification> saved = ArgumentCaptor.forClass(Notification.class);
         verify(notificationRepository).save(saved.capture());
-        assertThat(saved.getValue().getMessage()).hasSize(NotificationServiceImpl.MAX_MESSAGE_LENGTH).endsWith("…");
+        assertThat(saved.getValue().getMessage())
+                .hasSize(NotificationServiceImpl.MAX_MESSAGE_LENGTH)
+                .endsWith("…");
     }
 
     @Test

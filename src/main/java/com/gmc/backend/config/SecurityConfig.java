@@ -1,6 +1,7 @@
 package com.gmc.backend.config;
 
 import com.gmc.backend.security.JwtAuthenticationFilter;
+import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,8 +21,6 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.List;
-
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
@@ -33,9 +32,10 @@ public class SecurityConfig {
     @Value("${app.cors.allowed-origins:http://localhost:5173}")
     private String allowedOrigin;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthFilter,
-                          UserDetailsService userDetailsService,
-                          PasswordEncoder passwordEncoder) {
+    public SecurityConfig(
+            JwtAuthenticationFilter jwtAuthFilter,
+            UserDetailsService userDetailsService,
+            PasswordEncoder passwordEncoder) {
         this.jwtAuthFilter = jwtAuthFilter;
         this.userDetailsService = userDetailsService;
         this.passwordEncoder = passwordEncoder;
@@ -43,27 +43,38 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.cors(cors -> { })
+        http.cors(cors -> {})
                 .csrf(csrf -> csrf.disable())
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
-                        .requestMatchers("/uploads/**").permitAll()
-                        .requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/api/orders/**").hasRole("CUSTOMER")
-                        .requestMatchers("/api/appointments/**").hasRole("CUSTOMER")
-                        .requestMatchers("/api/feedback/**").hasRole("CUSTOMER")
-                        .requestMatchers("/api/custom-designs/**").hasRole("CUSTOMER")
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth.requestMatchers("/api/auth/**")
+                        .permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/products/**")
+                        .permitAll()
+                        .requestMatchers("/uploads/**")
+                        .permitAll()
+                        .requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
+                        .permitAll()
+                        .requestMatchers("/api/admin/**")
+                        .hasRole("ADMIN")
+                        .requestMatchers("/api/orders/**")
+                        .hasRole("CUSTOMER")
+                        .requestMatchers("/api/appointments/**")
+                        .hasRole("CUSTOMER")
+                        .requestMatchers("/api/feedback/**")
+                        .hasRole("CUSTOMER")
+                        .requestMatchers("/api/custom-designs/**")
+                        .hasRole("CUSTOMER")
                         // Stripe calls this without a login; the request signature is verified instead
-                        .requestMatchers(HttpMethod.POST, "/api/payments/stripe/webhook").permitAll()
-                        .requestMatchers("/api/payments/**").hasRole("CUSTOMER")
-                        .requestMatchers("/api/technician/**").hasRole("TECHNICIAN")
-                        .requestMatchers("/api/cart/**", "/api/complaints/**").hasRole("CUSTOMER")
-                        .anyRequest().authenticated()
-                )
+                        .requestMatchers(HttpMethod.POST, "/api/payments/stripe/webhook")
+                        .permitAll()
+                        .requestMatchers("/api/payments/**")
+                        .hasRole("CUSTOMER")
+                        .requestMatchers("/api/technician/**")
+                        .hasRole("TECHNICIAN")
+                        .requestMatchers("/api/cart/**", "/api/complaints/**")
+                        .hasRole("CUSTOMER")
+                        .anyRequest()
+                        .authenticated())
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
@@ -79,8 +90,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(
-            AuthenticationConfiguration config) throws Exception {
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
 

@@ -1,29 +1,5 @@
 package com.gmc.backend.service.impl;
 
-import com.gmc.backend.model.Role;
-import com.gmc.backend.dto.request.MaintenanceAssignRequest;
-import com.gmc.backend.dto.response.MaintenanceResponse;
-import com.gmc.backend.exception.BusinessRuleException;
-import com.gmc.backend.model.Maintenance;
-import com.gmc.backend.model.Product;
-import com.gmc.backend.model.User;
-import com.gmc.backend.repository.MaintenanceRepository;
-import com.gmc.backend.repository.ProductRepository;
-import com.gmc.backend.repository.UserRepository;
-import com.gmc.backend.service.EmailService;
-import com.gmc.backend.service.NotificationService;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -36,6 +12,29 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.gmc.backend.dto.request.MaintenanceAssignRequest;
+import com.gmc.backend.dto.response.MaintenanceResponse;
+import com.gmc.backend.exception.BusinessRuleException;
+import com.gmc.backend.model.Maintenance;
+import com.gmc.backend.model.Product;
+import com.gmc.backend.model.Role;
+import com.gmc.backend.model.User;
+import com.gmc.backend.repository.MaintenanceRepository;
+import com.gmc.backend.repository.ProductRepository;
+import com.gmc.backend.repository.UserRepository;
+import com.gmc.backend.service.EmailService;
+import com.gmc.backend.service.NotificationService;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
 /**
  * Unit tests for {@link MaintenanceServiceImpl}: product tasks, custom design tasks and images.
  */
@@ -44,12 +43,16 @@ class MaintenanceServiceImplTest {
 
     @Mock
     private MaintenanceRepository maintenanceRepository;
+
     @Mock
     private UserRepository userRepository;
+
     @Mock
     private ProductRepository productRepository;
+
     @Mock
     private NotificationService notificationService;
+
     @Mock
     private EmailService emailService;
 
@@ -75,8 +78,9 @@ class MaintenanceServiceImplTest {
     @Test
     void assign_withProduct_linksProduct() {
         when(userRepository.findById(7L)).thenReturn(Optional.of(technician()));
-        when(productRepository.findById(3L)).thenReturn(Optional.of(
-                Product.builder().productId(3L).name("Chair").build()));
+        when(productRepository.findById(3L))
+                .thenReturn(Optional.of(
+                        Product.builder().productId(3L).name("Chair").build()));
         when(maintenanceRepository.save(any(Maintenance.class))).thenAnswer(inv -> inv.getArgument(0));
         MaintenanceAssignRequest request = request();
         request.setProductId(3L);
@@ -94,15 +98,14 @@ class MaintenanceServiceImplTest {
         when(maintenanceRepository.save(any(Maintenance.class))).thenAnswer(inv -> inv.getArgument(0));
         MaintenanceAssignRequest request = request();
         request.setTitle("  Carved door panel ");
-        request.setImageUrls(Arrays.asList("/uploads/maintenance/a.jpg", null, " ",
-                "/uploads/maintenance/a.jpg", "/uploads/maintenance/b.jpg"));
+        request.setImageUrls(Arrays.asList(
+                "/uploads/maintenance/a.jpg", null, " ", "/uploads/maintenance/a.jpg", "/uploads/maintenance/b.jpg"));
 
         MaintenanceResponse result = maintenanceService.assignMaintenance(request);
 
         assertThat(result.getProductId()).isNull();
         assertThat(result.getTitle()).isEqualTo("Carved door panel");
-        assertThat(result.getImageUrls())
-                .containsExactly("/uploads/maintenance/a.jpg", "/uploads/maintenance/b.jpg");
+        assertThat(result.getImageUrls()).containsExactly("/uploads/maintenance/a.jpg", "/uploads/maintenance/b.jpg");
         verifyNoInteractions(productRepository);
     }
 
@@ -120,8 +123,12 @@ class MaintenanceServiceImplTest {
     @Test
     void getMaintenanceByTechnician_mapsCustomDesignWithoutProduct() {
         Maintenance task = Maintenance.builder()
-                .maintenanceId(1L).description("d").status("ASSIGNED")
-                .cost(BigDecimal.ONE).user(technician()).title("Panel")
+                .maintenanceId(1L)
+                .description("d")
+                .status("ASSIGNED")
+                .cost(BigDecimal.ONE)
+                .user(technician())
+                .title("Panel")
                 .imageUrls(List.of("/uploads/maintenance/a.jpg"))
                 .build();
         when(maintenanceRepository.findByUser_UserId(7L)).thenReturn(List.of(task));
@@ -135,7 +142,12 @@ class MaintenanceServiceImplTest {
 
     @Test
     void assign_notifiesTechnicianInAppAndByEmail() {
-        User tech = User.builder().userId(7L).name("Tech").email("tech@example.com").role(technicianRole()).build();
+        User tech = User.builder()
+                .userId(7L)
+                .name("Tech")
+                .email("tech@example.com")
+                .role(technicianRole())
+                .build();
         when(userRepository.findById(7L)).thenReturn(Optional.of(tech));
         when(maintenanceRepository.save(any(Maintenance.class))).thenAnswer(inv -> {
             Maintenance m = inv.getArgument(0);
@@ -147,28 +159,42 @@ class MaintenanceServiceImplTest {
 
         maintenanceService.assignMaintenance(request);
 
-        verify(notificationService).sendNotification(eq(7L), contains("New task #4"), eq("MAINTENANCE"),
-                eq("/technician/tasks"));
+        verify(notificationService)
+                .sendNotification(eq(7L), contains("New task #4"), eq("MAINTENANCE"), eq("/technician/tasks"));
         verify(emailService).send(eq("tech@example.com"), contains("#4"), contains("Carved panel"));
     }
 
     @Test
     void updateStatus_byAssignedTechnician_completesAndNotifiesAdmins() {
-        Maintenance task = Maintenance.builder().maintenanceId(4L).description("d").status("IN_PROGRESS")
-                .cost(BigDecimal.ONE).user(technician()).title("Panel").build();
+        Maintenance task = Maintenance.builder()
+                .maintenanceId(4L)
+                .description("d")
+                .status("IN_PROGRESS")
+                .cost(BigDecimal.ONE)
+                .user(technician())
+                .title("Panel")
+                .build();
         when(maintenanceRepository.findById(4L)).thenReturn(Optional.of(task));
         when(maintenanceRepository.save(any(Maintenance.class))).thenAnswer(inv -> inv.getArgument(0));
 
         MaintenanceResponse result = maintenanceService.updateMaintenanceStatus(4L, 7L, "completed");
 
         assertThat(result.getStatus()).isEqualTo("COMPLETED");
-        verify(notificationService).notifyAdmins(contains("completed maintenance task #4"), eq("MAINTENANCE"),
-                eq("/admin/maintenance"), isNull());
+        verify(notificationService)
+                .notifyAdmins(
+                        contains("completed maintenance task #4"),
+                        eq("MAINTENANCE"),
+                        eq("/admin/maintenance"),
+                        isNull());
     }
 
     @Test
     void updateStatus_byAnotherTechnician_isRejected() {
-        Maintenance task = Maintenance.builder().maintenanceId(4L).status("ASSIGNED").user(technician()).build();
+        Maintenance task = Maintenance.builder()
+                .maintenanceId(4L)
+                .status("ASSIGNED")
+                .user(technician())
+                .build();
         when(maintenanceRepository.findById(4L)).thenReturn(Optional.of(task));
 
         assertThatThrownBy(() -> maintenanceService.updateMaintenanceStatus(4L, 99L, "COMPLETED"))
@@ -178,7 +204,11 @@ class MaintenanceServiceImplTest {
 
     @Test
     void updateStatus_invalidStatus_isRejected() {
-        Maintenance task = Maintenance.builder().maintenanceId(4L).status("ASSIGNED").user(technician()).build();
+        Maintenance task = Maintenance.builder()
+                .maintenanceId(4L)
+                .status("ASSIGNED")
+                .user(technician())
+                .build();
         when(maintenanceRepository.findById(4L)).thenReturn(Optional.of(task));
 
         assertThatThrownBy(() -> maintenanceService.updateMaintenanceStatus(4L, 7L, "DONE"))
@@ -188,7 +218,12 @@ class MaintenanceServiceImplTest {
 
     @Test
     void assign_storesDeadlineAndIncludesItInTechnicianNotice() {
-        User tech = User.builder().userId(7L).name("Tech").email("tech@example.com").role(technicianRole()).build();
+        User tech = User.builder()
+                .userId(7L)
+                .name("Tech")
+                .email("tech@example.com")
+                .role(technicianRole())
+                .build();
         when(userRepository.findById(7L)).thenReturn(Optional.of(tech));
         when(maintenanceRepository.save(any(Maintenance.class))).thenAnswer(inv -> {
             Maintenance m = inv.getArgument(0);
@@ -202,8 +237,8 @@ class MaintenanceServiceImplTest {
         MaintenanceResponse result = maintenanceService.assignMaintenance(request);
 
         assertThat(result.getDeadline()).isEqualTo(LocalDate.of(2099, 1, 15));
-        verify(notificationService).sendNotification(eq(7L), contains("Due Thu, 15 Jan 2099"), eq("MAINTENANCE"),
-                eq("/technician/tasks"));
+        verify(notificationService)
+                .sendNotification(eq(7L), contains("Due Thu, 15 Jan 2099"), eq("MAINTENANCE"), eq("/technician/tasks"));
         verify(emailService).send(eq("tech@example.com"), anyString(), contains("Deadline: Thu, 15 Jan 2099"));
     }
 
@@ -221,8 +256,11 @@ class MaintenanceServiceImplTest {
 
     @Test
     void assign_toNonTechnician_isRejected() {
-        User customer = User.builder().userId(7L).name("Cust")
-                .role(Role.builder().roleId(1L).roleName("CUSTOMER").build()).build();
+        User customer = User.builder()
+                .userId(7L)
+                .name("Cust")
+                .role(Role.builder().roleId(1L).roleName("CUSTOMER").build())
+                .build();
         when(userRepository.findById(7L)).thenReturn(Optional.of(customer));
         MaintenanceAssignRequest request = request();
         request.setTitle("Panel");

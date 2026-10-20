@@ -1,5 +1,12 @@
 package com.gmc.backend.service.impl;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import com.gmc.backend.dto.request.CartItemRequest;
 import com.gmc.backend.dto.response.CartResponse;
 import com.gmc.backend.exception.BusinessRuleException;
@@ -14,23 +21,15 @@ import com.gmc.backend.repository.CartItemRepository;
 import com.gmc.backend.repository.CartRepository;
 import com.gmc.backend.repository.ProductRepository;
 import com.gmc.backend.repository.UserRepository;
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class CartServiceImplTest {
@@ -55,8 +54,13 @@ class CartServiceImplTest {
 
     private User user() {
         Role role = Role.builder().roleId(1L).roleName("CUSTOMER").build();
-        return User.builder().userId(1L).name("John").email("john@example.com")
-                .password("pass").role(role).build();
+        return User.builder()
+                .userId(1L)
+                .name("John")
+                .email("john@example.com")
+                .password("pass")
+                .role(role)
+                .build();
     }
 
     private Cart cartFor(User u) {
@@ -68,9 +72,15 @@ class CartServiceImplTest {
     }
 
     private Product product(int stock) {
-        ProductCategory cat = ProductCategory.builder().categoryId(1L).name("Cat").build();
-        return Product.builder().productId(1L).name("Item")
-                .price(new BigDecimal("50.00")).category(cat).stockQuantity(stock).build();
+        ProductCategory cat =
+                ProductCategory.builder().categoryId(1L).name("Cat").build();
+        return Product.builder()
+                .productId(1L)
+                .name("Item")
+                .price(new BigDecimal("50.00"))
+                .category(cat)
+                .stockQuantity(stock)
+                .build();
     }
 
     @Test

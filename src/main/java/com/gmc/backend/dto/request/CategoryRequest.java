@@ -1,7 +1,7 @@
 package com.gmc.backend.dto.request;
 
-import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 @Data

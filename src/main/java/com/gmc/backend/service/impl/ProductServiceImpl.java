@@ -1,25 +1,24 @@
 package com.gmc.backend.service.impl;
 
-import org.springframework.transaction.annotation.Transactional;
-import com.gmc.backend.repository.CartItemRepository;
 import com.gmc.backend.dto.request.ProductRequest;
 import com.gmc.backend.dto.response.CategoryResponse;
 import com.gmc.backend.dto.response.ProductResponse;
 import com.gmc.backend.exception.ResourceNotFoundException;
 import com.gmc.backend.model.Product;
 import com.gmc.backend.model.ProductCategory;
+import com.gmc.backend.repository.CartItemRepository;
 import com.gmc.backend.repository.ProductCategoryRepository;
 import com.gmc.backend.repository.ProductRepository;
 import com.gmc.backend.service.FileStorageService;
 import com.gmc.backend.service.ProductService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
@@ -29,6 +28,7 @@ public class ProductServiceImpl implements ProductService {
     private final ProductCategoryRepository categoryRepository;
     private final FileStorageService fileStorageService;
     private final CartItemRepository cartItemRepository;
+
     @Override
     public List<ProductResponse> getAllProducts() {
         return productRepository.findAll().stream()
@@ -44,7 +44,8 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public List<ProductResponse> getProductsByCategory(Long categoryId) {
-        ProductCategory category = categoryRepository.findById(categoryId)
+        ProductCategory category = categoryRepository
+                .findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found: " + categoryId));
         return productRepository.findByCategory(category).stream()
                 .filter(ProductServiceImpl::isActive)
@@ -70,9 +71,9 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public ProductResponse createProduct(ProductRequest request) {
-        ProductCategory category = categoryRepository.findById(request.getCategoryId())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Category not found: " + request.getCategoryId()));
+        ProductCategory category = categoryRepository
+                .findById(request.getCategoryId())
+                .orElseThrow(() -> new ResourceNotFoundException("Category not found: " + request.getCategoryId()));
         Product product = Product.builder()
                 .name(request.getName())
                 .description(request.getDescription())
@@ -88,9 +89,9 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public ProductResponse updateProduct(Long productId, ProductRequest request) {
         Product product = findById(productId);
-        ProductCategory category = categoryRepository.findById(request.getCategoryId())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Category not found: " + request.getCategoryId()));
+        ProductCategory category = categoryRepository
+                .findById(request.getCategoryId())
+                .orElseThrow(() -> new ResourceNotFoundException("Category not found: " + request.getCategoryId()));
         product.setName(request.getName());
         product.setDescription(request.getDescription());
         product.setPrice(request.getPrice());
@@ -127,9 +128,7 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public List<ProductResponse> getAllProductsIncludingArchived() {
-        return productRepository.findAll().stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+        return productRepository.findAll().stream().map(this::toResponse).collect(Collectors.toList());
     }
 
     private static boolean isActive(Product product) {
@@ -170,7 +169,8 @@ public class ProductServiceImpl implements ProductService {
     }
 
     private Product findById(Long productId) {
-        return productRepository.findById(productId)
+        return productRepository
+                .findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + productId));
     }
 

@@ -1,11 +1,10 @@
 package com.gmc.backend.dto.response;
 
-import lombok.Builder;
-import lombok.Data;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import lombok.Builder;
+import lombok.Data;
 
 /** Public reviews for a product page; reviewer names are shortened (e.g. "Kamal P.") for privacy. */
 @Data

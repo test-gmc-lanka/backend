@@ -1,8 +1,17 @@
 package com.gmc.backend.service.impl;
 
-import static org.mockito.ArgumentMatchers.eq;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import com.gmc.backend.dto.request.LoginRequest;
 import com.gmc.backend.dto.request.RegisterRequest;
 import com.gmc.backend.dto.response.AuthResponse;
@@ -14,6 +23,7 @@ import com.gmc.backend.repository.UserRepository;
 import com.gmc.backend.security.JwtTokenProvider;
 import com.gmc.backend.service.RefreshTokenService;
 import jakarta.servlet.http.HttpServletResponse;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -21,17 +31,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.crypto.password.PasswordEncoder;
-
-import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class AuthServiceImplTest {
@@ -81,8 +80,13 @@ class AuthServiceImplTest {
         req.setPassword("password123");
 
         Role role = customerRole();
-        User saved = User.builder().userId(1L).name("NewUser").email("new@example.com")
-                .password("encoded").role(role).build();
+        User saved = User.builder()
+                .userId(1L)
+                .name("NewUser")
+                .email("new@example.com")
+                .password("encoded")
+                .role(role)
+                .build();
 
         when(userRepository.existsByEmail("new@example.com")).thenReturn(false);
         when(roleRepository.findByRoleName("CUSTOMER")).thenReturn(Optional.of(role));
@@ -106,8 +110,13 @@ class AuthServiceImplTest {
         req.setPassword("password");
 
         Role role = customerRole();
-        User saved = User.builder().userId(1L).name("NewUser").email("new@example.com")
-                .password("encoded").role(role).build();
+        User saved = User.builder()
+                .userId(1L)
+                .name("NewUser")
+                .email("new@example.com")
+                .password("encoded")
+                .role(role)
+                .build();
 
         when(userRepository.existsByEmail("new@example.com")).thenReturn(false);
         when(roleRepository.findByRoleName("CUSTOMER")).thenReturn(Optional.empty());
@@ -130,8 +139,13 @@ class AuthServiceImplTest {
         HttpServletResponse httpResponse = mock(HttpServletResponse.class);
 
         Role role = customerRole();
-        User user = User.builder().userId(1L).name("User").email("user@example.com")
-                .password("encoded").role(role).build();
+        User user = User.builder()
+                .userId(1L)
+                .name("User")
+                .email("user@example.com")
+                .password("encoded")
+                .role(role)
+                .build();
 
         when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(user));
         when(refreshTokenService.createRefreshToken(1L)).thenReturn("raw-refresh-token");

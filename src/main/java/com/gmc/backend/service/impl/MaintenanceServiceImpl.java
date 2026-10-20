@@ -13,10 +13,6 @@ import com.gmc.backend.repository.UserRepository;
 import com.gmc.backend.service.EmailService;
 import com.gmc.backend.service.MaintenanceService;
 import com.gmc.backend.service.NotificationService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -25,6 +21,9 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -43,10 +42,14 @@ public class MaintenanceServiceImpl implements MaintenanceService {
     @Override
     @Transactional
     public MaintenanceResponse assignMaintenance(MaintenanceAssignRequest request) {
-        User technician = userRepository.findById(request.getTechnicianId())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Technician not found: " + request.getTechnicianId()));
-        if (!"TECHNICIAN".equals(technician.getRole() == null ? null : technician.getRole().getRoleName())
+        User technician = userRepository
+                .findById(request.getTechnicianId())
+                .orElseThrow(() -> new ResourceNotFoundException("Technician not found: " + request.getTechnicianId()));
+        if (!"TECHNICIAN"
+                        .equals(
+                                technician.getRole() == null
+                                        ? null
+                                        : technician.getRole().getRoleName())
                 || Boolean.FALSE.equals(technician.getActive())) {
             throw new BusinessRuleException("Tasks can only be assigned to an active technician");
         }
@@ -56,9 +59,9 @@ public class MaintenanceServiceImpl implements MaintenanceService {
         }
         Product product = null;
         if (request.getProductId() != null) {
-            product = productRepository.findById(request.getProductId())
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Product not found: " + request.getProductId()));
+            product = productRepository
+                    .findById(request.getProductId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + request.getProductId()));
         }
         List<String> images = request.getImageUrls() == null
                 ? new ArrayList<>()
@@ -94,17 +97,15 @@ public class MaintenanceServiceImpl implements MaintenanceService {
 
     @Override
     public List<MaintenanceResponse> getAllMaintenance() {
-        return maintenanceRepository.findAll().stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+        return maintenanceRepository.findAll().stream().map(this::toResponse).collect(Collectors.toList());
     }
 
     @Override
     @Transactional
     public MaintenanceResponse updateMaintenanceStatus(Long maintenanceId, Long technicianId, String status) {
-        Maintenance maintenance = maintenanceRepository.findById(maintenanceId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Maintenance task not found: " + maintenanceId));
+        Maintenance maintenance = maintenanceRepository
+                .findById(maintenanceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Maintenance task not found: " + maintenanceId));
         if (!maintenance.getUser().getUserId().equals(technicianId)) {
             throw new BusinessRuleException("This task is not assigned to you");
         }
@@ -118,9 +119,12 @@ public class MaintenanceServiceImpl implements MaintenanceService {
         maintenance.setStatus(newStatus);
         Maintenance saved = maintenanceRepository.save(maintenance);
         if ("COMPLETED".equals(newStatus)) {
-            notificationService.notifyAdmins(saved.getUser().getName() + " completed maintenance task #"
-                    + saved.getMaintenanceId() + " (" + subjectOf(saved) + ").",
-                    "MAINTENANCE", "/admin/maintenance", null);
+            notificationService.notifyAdmins(
+                    saved.getUser().getName() + " completed maintenance task #" + saved.getMaintenanceId() + " ("
+                            + subjectOf(saved) + ").",
+                    "MAINTENANCE",
+                    "/admin/maintenance",
+                    null);
         }
         return toResponse(saved);
     }
@@ -128,17 +132,22 @@ public class MaintenanceServiceImpl implements MaintenanceService {
     // Technicians may not be logged in when a job is assigned, so they also get an email
     private void notifyTechnician(Maintenance task) {
         User technician = task.getUser();
-        String due = task.getDeadline() == null ? "" : " Due " + task.getDeadline().format(DEADLINE_FORMAT) + ".";
-        String message = "New task #" + task.getMaintenanceId() + " assigned to you: " + subjectOf(task)
-                + "." + due + " " + task.getDescription();
+        String due =
+                task.getDeadline() == null ? "" : " Due " + task.getDeadline().format(DEADLINE_FORMAT) + ".";
+        String message = "New task #" + task.getMaintenanceId() + " assigned to you: " + subjectOf(task) + "." + due
+                + " " + task.getDescription();
         notificationService.sendNotification(technician.getUserId(), message, "MAINTENANCE", "/technician/tasks");
-        emailService.send(technician.getEmail(), "GMC Lanka – New maintenance task #" + task.getMaintenanceId(),
+        emailService.send(
+                technician.getEmail(),
+                "GMC Lanka – New maintenance task #" + task.getMaintenanceId(),
                 "Hi " + technician.getName() + ",\n\nYou have a new maintenance task.\n\n"
                         + "Task: " + subjectOf(task) + "\n"
                         + "Details: " + task.getDescription() + "\n"
-                        + (task.getDeadline() == null ? ""
+                        + (task.getDeadline() == null
+                                ? ""
                                 : "Deadline: " + task.getDeadline().format(DEADLINE_FORMAT) + "\n")
-                        + (task.getImageUrls().isEmpty() ? ""
+                        + (task.getImageUrls().isEmpty()
+                                ? ""
                                 : "Reference images: " + task.getImageUrls().size() + " (see the task in the app)\n")
                         + "\nOpen My Tasks in the GMC Lanka app to get started.\n\n— GMC Lanka");
     }

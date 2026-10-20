@@ -1,8 +1,13 @@
 package com.gmc.backend.security;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.when;
+
 import com.gmc.backend.model.Role;
 import com.gmc.backend.model.User;
 import com.gmc.backend.repository.UserRepository;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -10,12 +15,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-
-import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class CustomUserDetailsServiceTest {
@@ -47,7 +46,6 @@ class CustomUserDetailsServiceTest {
     void loadUserByUsername_shouldThrowUsernameNotFoundExceptionWhenMissing() {
         when(userRepository.findByEmail("missing@example.com")).thenReturn(Optional.empty());
 
-        assertThrows(UsernameNotFoundException.class,
-                () -> service.loadUserByUsername("missing@example.com"));
+        assertThrows(UsernameNotFoundException.class, () -> service.loadUserByUsername("missing@example.com"));
     }
 }

@@ -1,5 +1,15 @@
 package com.gmc.backend.service.impl;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import com.gmc.backend.dto.request.ComplaintRequest;
 import com.gmc.backend.dto.response.ComplaintResponse;
 import com.gmc.backend.exception.BusinessRuleException;
@@ -13,38 +23,31 @@ import com.gmc.backend.repository.OrderRepository;
 import com.gmc.backend.repository.UserRepository;
 import com.gmc.backend.service.EmailService;
 import com.gmc.backend.service.NotificationService;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.contains;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 @ExtendWith(MockitoExtension.class)
 class ComplaintServiceImplTest {
 
     @Mock
     private ComplaintRepository complaintRepository;
+
     @Mock
     private UserRepository userRepository;
+
     @Mock
     private OrderRepository orderRepository;
+
     @Mock
     private NotificationService notificationService;
+
     @Mock
     private EmailService emailService;
 
@@ -52,13 +55,22 @@ class ComplaintServiceImplTest {
     private ComplaintServiceImpl complaintService;
 
     private User customer() {
-        return User.builder().userId(1L).name("Alice").email("alice@example.com").build();
+        return User.builder()
+                .userId(1L)
+                .name("Alice")
+                .email("alice@example.com")
+                .build();
     }
 
     private Order orderWithChair(User owner) {
-        Order order = Order.builder().orderId(12L).user(owner).items(new ArrayList<>()).build();
+        Order order = Order.builder()
+                .orderId(12L)
+                .user(owner)
+                .items(new ArrayList<>())
+                .build();
         Product chair = Product.builder().productId(3L).name("Teak Chair").build();
-        order.getItems().add(OrderItem.builder().order(order).product(chair).quantity(1).build());
+        order.getItems()
+                .add(OrderItem.builder().order(order).product(chair).quantity(1).build());
         return order;
     }
 
@@ -83,8 +95,12 @@ class ComplaintServiceImplTest {
         assertThat(result.getStatus()).isEqualTo("OPEN");
         assertThat(result.getOrderId()).isEqualTo(12L);
         assertThat(result.getProductName()).isEqualTo("Teak Chair");
-        verify(notificationService).notifyAdmins(contains("Teak Chair (order #12)"), eq("COMPLAINT"),
-                eq("/admin/feedback"), eq("New customer complaint"));
+        verify(notificationService)
+                .notifyAdmins(
+                        contains("Teak Chair (order #12)"),
+                        eq("COMPLAINT"),
+                        eq("/admin/feedback"),
+                        eq("New customer complaint"));
         verify(notificationService).sendNotification(eq(1L), anyString(), eq("COMPLAINT"), eq("/orders/12"));
     }
 
@@ -123,8 +139,14 @@ class ComplaintServiceImplTest {
     @Test
     void updateComplaintStatus_resolved_notifiesCustomerInAppAndByEmail() {
         User alice = customer();
-        Complaint complaint = Complaint.builder().complaintId(5L).description("Leg is cracked")
-                .date(LocalDateTime.now()).status("OPEN").user(alice).order(orderWithChair(alice)).build();
+        Complaint complaint = Complaint.builder()
+                .complaintId(5L)
+                .description("Leg is cracked")
+                .date(LocalDateTime.now())
+                .status("OPEN")
+                .user(alice)
+                .order(orderWithChair(alice))
+                .build();
         when(complaintRepository.findById(5L)).thenReturn(Optional.of(complaint));
         when(complaintRepository.save(any(Complaint.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -137,7 +159,11 @@ class ComplaintServiceImplTest {
 
     @Test
     void updateComplaintStatus_invalidStatus_isRejected() {
-        Complaint complaint = Complaint.builder().complaintId(5L).status("OPEN").user(customer()).build();
+        Complaint complaint = Complaint.builder()
+                .complaintId(5L)
+                .status("OPEN")
+                .user(customer())
+                .build();
         when(complaintRepository.findById(5L)).thenReturn(Optional.of(complaint));
 
         assertThatThrownBy(() -> complaintService.updateComplaintStatus(5L, "DELETED"))
@@ -146,8 +172,13 @@ class ComplaintServiceImplTest {
 
     @Test
     void getComplaintsByUser_mapsResults() {
-        Complaint complaint = Complaint.builder().complaintId(5L).description("d").status("OPEN")
-                .date(LocalDateTime.now()).user(customer()).build();
+        Complaint complaint = Complaint.builder()
+                .complaintId(5L)
+                .description("d")
+                .status("OPEN")
+                .date(LocalDateTime.now())
+                .user(customer())
+                .build();
         when(complaintRepository.findByUser_UserId(1L)).thenReturn(List.of(complaint));
 
         assertThat(complaintService.getComplaintsByUser(1L)).hasSize(1);

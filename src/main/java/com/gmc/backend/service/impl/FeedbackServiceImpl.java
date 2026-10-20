@@ -17,15 +17,14 @@ import com.gmc.backend.repository.ProductRepository;
 import com.gmc.backend.repository.UserRepository;
 import com.gmc.backend.service.FeedbackService;
 import com.gmc.backend.service.NotificationService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -44,11 +43,12 @@ public class FeedbackServiceImpl implements FeedbackService {
     @Override
     @Transactional
     public FeedbackResponse submitFeedback(Long userId, FeedbackRequest request) {
-        User user = userRepository.findById(userId)
+        User user = userRepository
+                .findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
-        Order order = orderRepository.findById(request.getOrderId())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Order not found: " + request.getOrderId()));
+        Order order = orderRepository
+                .findById(request.getOrderId())
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found: " + request.getOrderId()));
         if (!order.getUser().getUserId().equals(userId)) {
             throw new BusinessRuleException("Order does not belong to this user");
         }
@@ -78,7 +78,8 @@ public class FeedbackServiceImpl implements FeedbackService {
     @Override
     @Transactional
     public FeedbackResponse updateFeedback(Long userId, Long feedbackId, FeedbackUpdateRequest request) {
-        Feedback feedback = feedbackRepository.findById(feedbackId)
+        Feedback feedback = feedbackRepository
+                .findById(feedbackId)
                 .orElseThrow(() -> new ResourceNotFoundException("Review not found: " + feedbackId));
         if (!feedback.getUser().getUserId().equals(userId)) {
             throw new BusinessRuleException("You can only edit your own reviews");
@@ -103,7 +104,8 @@ public class FeedbackServiceImpl implements FeedbackService {
     @Override
     @Transactional
     public FeedbackResponse setHidden(Long feedbackId, boolean hidden) {
-        Feedback feedback = feedbackRepository.findById(feedbackId)
+        Feedback feedback = feedbackRepository
+                .findById(feedbackId)
                 .orElseThrow(() -> new ResourceNotFoundException("Review not found: " + feedbackId));
         feedback.setHidden(hidden);
         return toResponse(feedbackRepository.save(feedback));
@@ -114,9 +116,12 @@ public class FeedbackServiceImpl implements FeedbackService {
         if (f.getRating() > 2) {
             return;
         }
-        notificationService.notifyAdmins(f.getUser().getName() + " " + verb + " " + f.getProduct().getName()
-                + " " + f.getRating() + "★ (order #" + f.getOrder().getOrderId() + "): \"" + f.getComment() + "\"",
-                "REVIEW", "/admin/feedback", null);
+        notificationService.notifyAdmins(
+                f.getUser().getName() + " " + verb + " " + f.getProduct().getName() + " " + f.getRating() + "★ (order #"
+                        + f.getOrder().getOrderId() + "): \"" + f.getComment() + "\"",
+                "REVIEW",
+                "/admin/feedback",
+                null);
     }
 
     @Override
@@ -128,9 +133,7 @@ public class FeedbackServiceImpl implements FeedbackService {
 
     @Override
     public List<FeedbackResponse> getAllFeedback() {
-        return feedbackRepository.findAll().stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+        return feedbackRepository.findAll().stream().map(this::toResponse).collect(Collectors.toList());
     }
 
     @Override
@@ -146,21 +149,25 @@ public class FeedbackServiceImpl implements FeedbackService {
             throw new ResourceNotFoundException("Product not found: " + productId);
         }
         List<Feedback> reviews = feedbackRepository.findVisibleByProduct(productId);
-        BigDecimal average = reviews.isEmpty() ? BigDecimal.ZERO
-                : BigDecimal.valueOf(reviews.stream().mapToInt(Feedback::getRating).sum())
+        BigDecimal average = reviews.isEmpty()
+                ? BigDecimal.ZERO
+                : BigDecimal.valueOf(
+                                reviews.stream().mapToInt(Feedback::getRating).sum())
                         .divide(BigDecimal.valueOf(reviews.size()), 1, RoundingMode.HALF_UP);
         return ProductReviewsResponse.builder()
                 .averageRating(average)
                 .reviewCount(reviews.size())
-                .reviews(reviews.stream().map(f -> ProductReviewsResponse.Review.builder()
-                        .reviewId(f.getFeedbackId())
-                        .reviewerName(shortName(f.getUser().getName()))
-                        .rating(f.getRating())
-                        .comment(f.getComment())
-                        .createdAt(f.getCreatedAt())
-                        .edited(f.getUpdatedAt() != null)
-                        .verifiedPurchase(f.getOrder() != null)
-                        .build()).collect(Collectors.toList()))
+                .reviews(reviews.stream()
+                        .map(f -> ProductReviewsResponse.Review.builder()
+                                .reviewId(f.getFeedbackId())
+                                .reviewerName(shortName(f.getUser().getName()))
+                                .rating(f.getRating())
+                                .comment(f.getComment())
+                                .createdAt(f.getCreatedAt())
+                                .edited(f.getUpdatedAt() != null)
+                                .verifiedPurchase(f.getOrder() != null)
+                                .build())
+                        .collect(Collectors.toList()))
                 .build();
     }
 

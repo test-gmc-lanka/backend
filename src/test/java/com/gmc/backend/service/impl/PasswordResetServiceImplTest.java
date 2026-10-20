@@ -1,27 +1,5 @@
 package com.gmc.backend.service.impl;
 
-import com.gmc.backend.exception.BusinessRuleException;
-import com.gmc.backend.model.PasswordResetToken;
-import com.gmc.backend.model.User;
-import com.gmc.backend.repository.PasswordResetTokenRepository;
-import com.gmc.backend.repository.RefreshTokenRepository;
-import com.gmc.backend.repository.UserRepository;
-import com.gmc.backend.service.EmailService;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.test.util.ReflectionTestUtils;
-
-import java.time.LocalDateTime;
-import java.util.Optional;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -32,17 +10,42 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.gmc.backend.exception.BusinessRuleException;
+import com.gmc.backend.model.PasswordResetToken;
+import com.gmc.backend.model.User;
+import com.gmc.backend.repository.PasswordResetTokenRepository;
+import com.gmc.backend.repository.RefreshTokenRepository;
+import com.gmc.backend.repository.UserRepository;
+import com.gmc.backend.service.EmailService;
+import java.time.LocalDateTime;
+import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.util.ReflectionTestUtils;
+
 @ExtendWith(MockitoExtension.class)
 class PasswordResetServiceImplTest {
 
     @Mock
     private UserRepository userRepository;
+
     @Mock
     private PasswordResetTokenRepository resetTokenRepository;
+
     @Mock
     private RefreshTokenRepository refreshTokenRepository;
+
     @Mock
     private PasswordEncoder passwordEncoder;
+
     @Mock
     private EmailService emailService;
 
@@ -56,8 +59,13 @@ class PasswordResetServiceImplTest {
     }
 
     private User user(boolean active) {
-        return User.builder().userId(1L).name("Alice").email("alice@example.com")
-                .password("old-hash").active(active).build();
+        return User.builder()
+                .userId(1L)
+                .name("Alice")
+                .email("alice@example.com")
+                .password("old-hash")
+                .active(active)
+                .build();
     }
 
     // Requests a reset and returns the raw token from the emailed link
@@ -81,7 +89,8 @@ class PasswordResetServiceImplTest {
         verify(resetTokenRepository).save(saved.capture());
         assertThat(saved.getValue().getToken()).hasSize(64).isNotEqualTo(rawToken);
         assertThat(saved.getValue().getExpiryDate())
-                .isBetween(LocalDateTime.now().plusMinutes(29), LocalDateTime.now().plusMinutes(31));
+                .isBetween(
+                        LocalDateTime.now().plusMinutes(29), LocalDateTime.now().plusMinutes(31));
     }
 
     @Test
@@ -142,7 +151,10 @@ class PasswordResetServiceImplTest {
     @Test
     void resetPassword_expiredToken_throws() {
         PasswordResetToken expired = PasswordResetToken.builder()
-                .user(user(true)).token("h").expiryDate(LocalDateTime.now().minusMinutes(1)).build();
+                .user(user(true))
+                .token("h")
+                .expiryDate(LocalDateTime.now().minusMinutes(1))
+                .build();
         when(resetTokenRepository.findByToken(anyString())).thenReturn(Optional.of(expired));
 
         assertThatThrownBy(() -> passwordResetService.resetPassword("raw", "newSecret1"))
@@ -153,7 +165,11 @@ class PasswordResetServiceImplTest {
     @Test
     void resetPassword_usedToken_throws() {
         PasswordResetToken used = PasswordResetToken.builder()
-                .user(user(true)).token("h").expiryDate(LocalDateTime.now().plusMinutes(5)).used(true).build();
+                .user(user(true))
+                .token("h")
+                .expiryDate(LocalDateTime.now().plusMinutes(5))
+                .used(true)
+                .build();
         when(resetTokenRepository.findByToken(anyString())).thenReturn(Optional.of(used));
 
         assertThatThrownBy(() -> passwordResetService.resetPassword("raw", "newSecret1"))

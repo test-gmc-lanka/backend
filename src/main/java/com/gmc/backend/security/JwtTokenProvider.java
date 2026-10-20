@@ -1,20 +1,19 @@
 package com.gmc.backend.security;
 
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.beans.factory.annotation.Autowired;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
-import org.springframework.stereotype.Component;
-
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Base64;
 import java.util.Date;
 import java.util.Map;
 import java.util.function.Function;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
 @Component
 public class JwtTokenProvider {
@@ -37,8 +36,8 @@ public class JwtTokenProvider {
             this.secretKey = configuredSecret.trim();
         } else {
             if (configuredSecret != null && !configuredSecret.isBlank()) {
-                LoggerFactory.getLogger(JwtTokenProvider.class).warn(
-                        "jwt.secret is shorter than 256 bits; using a random key (tokens reset on restart)");
+                LoggerFactory.getLogger(JwtTokenProvider.class)
+                        .warn("jwt.secret is shorter than 256 bits; using a random key (tokens reset on restart)");
             }
             this.secretKey = Base64.getEncoder()
                     .encodeToString(Keys.secretKeyFor(SignatureAlgorithm.HS256).getEncoded());
@@ -65,8 +64,8 @@ public class JwtTokenProvider {
     }
 
     //  Generate Access Token with extra claims
-    public String generateToken(org.springframework.security.core.userdetails.UserDetails userDetails,
-                                Map<String, Object> extraClaims) {
+    public String generateToken(
+            org.springframework.security.core.userdetails.UserDetails userDetails, Map<String, Object> extraClaims) {
         return Jwts.builder()
                 .setClaims(extraClaims)
                 .setSubject(userDetails.getUsername())

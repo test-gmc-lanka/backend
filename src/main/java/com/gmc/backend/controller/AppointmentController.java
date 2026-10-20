@@ -8,6 +8,7 @@ import com.gmc.backend.security.CustomUserDetails;
 import com.gmc.backend.service.AppointmentService;
 import com.gmc.backend.service.FileStorageService;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -24,8 +25,6 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/appointments")
 @RequiredArgsConstructor
@@ -40,14 +39,12 @@ public class AppointmentController {
         if (files.size() > 6) {
             throw new BusinessRuleException("You can attach up to 6 images");
         }
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(fileStorageService.storeImages(files, "appointments"));
+        return ResponseEntity.status(HttpStatus.CREATED).body(fileStorageService.storeImages(files, "appointments"));
     }
 
     @PostMapping
     public ResponseEntity<AppointmentResponse> book(
-            @AuthenticationPrincipal CustomUserDetails user,
-            @Valid @RequestBody AppointmentRequest request) {
+            @AuthenticationPrincipal CustomUserDetails user, @Valid @RequestBody AppointmentRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(appointmentService.bookAppointment(user.getId(), request));
     }
@@ -63,14 +60,12 @@ public class AppointmentController {
             @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable Long appointmentId,
             @Valid @RequestBody RescheduleRequest request) {
-        return ResponseEntity.ok(
-                appointmentService.reschedule(appointmentId, user.getId(), request));
+        return ResponseEntity.ok(appointmentService.reschedule(appointmentId, user.getId(), request));
     }
 
     @DeleteMapping("/{appointmentId}")
     public ResponseEntity<AppointmentResponse> cancel(
-            @AuthenticationPrincipal CustomUserDetails user,
-            @PathVariable Long appointmentId) {
+            @AuthenticationPrincipal CustomUserDetails user, @PathVariable Long appointmentId) {
         return ResponseEntity.ok(appointmentService.cancelAppointment(appointmentId, user.getId()));
     }
 }

@@ -2,7 +2,6 @@ package com.gmc.backend.service;
 
 import com.gmc.backend.dto.request.ComplaintRequest;
 import com.gmc.backend.dto.response.ComplaintResponse;
-
 import java.util.List;
 
 public interface ComplaintService {

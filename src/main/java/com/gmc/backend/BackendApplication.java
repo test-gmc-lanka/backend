@@ -1,7 +1,7 @@
 package com.gmc.backend;
 
-import org.springframework.boot.SpringApplication;
 import java.util.TimeZone;
+import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
@@ -13,5 +13,4 @@ public class BackendApplication {
         TimeZone.setDefault(TimeZone.getTimeZone(System.getProperty("app.timezone", "Asia/Colombo")));
         SpringApplication.run(BackendApplication.class, args);
     }
-
 }

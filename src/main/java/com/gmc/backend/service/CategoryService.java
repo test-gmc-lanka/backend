@@ -2,7 +2,6 @@ package com.gmc.backend.service;
 
 import com.gmc.backend.dto.request.CategoryRequest;
 import com.gmc.backend.dto.response.CategoryResponse;
-
 import java.util.List;
 
 public interface CategoryService {
