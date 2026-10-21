@@ -59,7 +59,7 @@ jobs:
       - name: Compile and package
         run: ./mvnw package -DskipTests -Dcheckstyle.skip
       - name: Upload jar
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: backend-jar
           path: target/*.jar
@@ -83,14 +83,14 @@ jobs:
         run: bash .github/scripts/coverage-summary.sh target/site/jacoco/jacoco.csv "Unit test coverage" >> "$GITHUB_STEP_SUMMARY"
       - name: Upload unit coverage report
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: unit-coverage-report
           path: target/site/jacoco/
           retention-days: 14
       - name: Upload test results
         if: failure()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: unit-test-results
           path: target/surefire-reports/
@@ -135,14 +135,14 @@ jobs:
         run: bash .github/scripts/coverage-summary.sh target/site/jacoco-merged/jacoco.csv "Unit + integration coverage" >> "$GITHUB_STEP_SUMMARY"
       - name: Upload merged coverage report
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-report
           path: target/site/jacoco-merged/
           retention-days: 14
       - name: Upload test results
         if: failure()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: integration-test-results
           path: |
