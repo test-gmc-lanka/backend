@@ -5,7 +5,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import java.nio.charset.StandardCharsets;
-import java.security.Key;
+import javax.crypto.SecretKey;
 import java.util.Base64;
 import java.util.Date;
 import java.util.Map;
@@ -55,7 +55,7 @@ public class JwtTokenProvider {
         }
     }
 
-    private Key getSigningKey() {
+    private SecretKey getSigningKey() {
         try {
             return Keys.hmacShaKeyFor(Base64.getDecoder().decode(secretKey));
         } catch (IllegalArgumentException ex) {
@@ -104,10 +104,10 @@ public class JwtTokenProvider {
 
     //  Parse claims
     private Claims extractAllClaims(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(getSigningKey())
+        return Jwts.parser()
+                .verifyWith(getSigningKey())
                 .build()
-                .parseClaimsJws(token)
-                .getBody();
+                .parseSignedClaims(token)
+                .getPayload();
     }
 }
