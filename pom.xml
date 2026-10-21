@@ -13,10 +13,9 @@
 	<description>GMC Lanka Creations – CNC e-commerce backend</description>
 	<properties>
 		<java.version>21</java.version>
-		<!--  Security pins above the Boot 3.5.16 defaults (high/critical CVEs found by the CI scan).
-		      Remove each pin once the Boot version manages a fixed release.  -->
+		<!--  Security pin above the Boot 3.5.16 default (high/critical CVEs found by the CI scan).
+		      Remove once the Boot version manages a fixed release.  -->
 		<tomcat.version>10.1.61</tomcat.version>
-		<jackson-bom.version>2.21.8</jackson-bom.version>
 		<!--  Build plugins  -->
 		<jacoco.version>0.8.15</jacoco.version>
 		<spotless.version>3.10.4</spotless.version>
