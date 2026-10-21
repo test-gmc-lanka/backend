@@ -12,7 +12,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.gmc.backend.model.Product;
 import com.gmc.backend.model.User;
 import com.gmc.backend.service.StripeGateway;
@@ -21,6 +20,7 @@ import java.math.RoundingMode;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
+import tools.jackson.databind.JsonNode;
 
 class OrderControllerIT extends ShopIntegrationTestBase {
 

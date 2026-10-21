@@ -9,7 +9,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.gmc.backend.model.Order;
 import com.gmc.backend.model.PaymentStatus;
 import com.gmc.backend.model.User;
@@ -20,6 +19,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import tools.jackson.databind.JsonNode;
 
 class PaymentControllerIT extends ShopIntegrationTestBase {
 

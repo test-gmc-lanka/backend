@@ -1,6 +1,5 @@
 package com.gmc.backend.it;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gmc.backend.model.Role;
 import com.gmc.backend.model.User;
 import com.gmc.backend.repository.RoleRepository;
@@ -19,6 +18,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Base for API integration tests: the full Spring context, real security filter chain and

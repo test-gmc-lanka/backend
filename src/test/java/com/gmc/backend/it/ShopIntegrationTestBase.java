@@ -6,7 +6,6 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.gmc.backend.model.Product;
 import com.gmc.backend.model.ProductCategory;
 import com.gmc.backend.model.User;
@@ -20,6 +19,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import tools.jackson.databind.JsonNode;
 
 /** Shared seed helpers for the cart, order and payment API tests. */
 abstract class ShopIntegrationTestBase extends IntegrationTestBase {
