@@ -13,7 +13,7 @@ Closes #
 ## How it was tested
 
 - [ ] Unit tests added/updated (`./mvnw test`)
-- [ ] Integration test for every new or changed endpoint (`*IT.java`, `./mvnw verify`)
+- [ ] Integration test for every new or changed endpoint (`*IT.java` in the tests repo, `./mvnw verify`)
 - [ ] Manually checked via Swagger UI / Postman
 
 ## Definition of Done

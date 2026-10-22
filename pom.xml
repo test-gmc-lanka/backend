@@ -24,6 +24,9 @@
 		<palantir-java-format.version>2.102.0</palantir-java-format.version>
 		<!--  Merged unit + integration coverage, checked against the 80% gate in mvn verify  -->
 		<jacoco.merged.exec>${project.build.directory}/jacoco-merged.exec</jacoco.merged.exec>
+		<!--  Integration tests (*IT.java) live in the tests repository, cloned next to this one.
+		      CI checks it out elsewhere and overrides this with -Dintegration-tests.dir=...  -->
+		<integration-tests.dir>${project.basedir}/../tests/backend/src/test/java</integration-tests.dir>
 	</properties>
 	<dependencies>
 		<!--  ── Web & API ───────────────────────────────────  -->
@@ -185,7 +188,25 @@
 					</java>
 				</configuration>
 			</plugin>
-			<!--  ── Integration tests: *IT.java run by Failsafe in mvn verify ──  -->
+			<!--  ── Integration tests: *IT.java from ${integration-tests.dir}, run by Failsafe in mvn verify ──  -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>build-helper-maven-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>add-integration-tests</id>
+						<phase>generate-test-sources</phase>
+						<goals>
+							<goal>add-test-source</goal>
+						</goals>
+						<configuration>
+							<sources>
+								<source>${integration-tests.dir}</source>
+							</sources>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-failsafe-plugin</artifactId>

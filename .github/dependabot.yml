@@ -26,11 +26,3 @@ updates:
       interval: monthly
     commit-message:
       prefix: ci
-
-  - package-ecosystem: docker
-    directory: /
-    target-branch: develop
-    schedule:
-      interval: monthly
-    commit-message:
-      prefix: build

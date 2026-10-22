@@ -18,6 +18,10 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- Repository layout: the CI/CD pipeline, Dockerfile, Trivy exceptions and coverage script moved to the
+  `infra` repository (`.github/workflows/ci.yml` now calls the shared pipeline there), and the
+  integration tests (`*IT.java`) moved to the `tests` repository; `pom.xml` adds them as a test source
+  root. Behaviour of every stage, including the 80% coverage gate, is unchanged.
 - CI no longer ignores failing tests or coverage (`continue-on-error` removed).
 - Upgraded Spring Boot 3.4.1 to 3.5.16 and springdoc-openapi 2.8.3 to 2.9.1.
 
